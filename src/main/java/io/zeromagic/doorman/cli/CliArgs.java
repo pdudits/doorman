@@ -18,8 +18,9 @@ package io.zeromagic.doorman.cli;
 
 import picocli.CommandLine;
 
-class CliArgs {
-    @CommandLine.Option(names="--kube-context")
+@CommandLine.Command(name = "doorman", mixinStandardHelpOptions = true)
+public class CliArgs {
+    @CommandLine.Option(names = "--kube-context")
     String kubeContext;
 
 }

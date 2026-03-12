@@ -17,9 +17,9 @@
 package io.zeromagic.doorman;
 
 import io.avaje.inject.BeanScope;
-import io.avaje.inject.BeanScopeBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.zeromagic.doorman.cli.RawArgs;
+import io.zeromagic.doorman.cli.CliArgs;
+import picocli.CommandLine;
 
 /**
  *
@@ -28,7 +28,21 @@ public class Main
 {
     public static void main( String[] args )
     {
-        var scope = BeanScope.builder().bean(RawArgs.class, new RawArgs(args))
+        var cliArgs = new CliArgs();
+        var commandLine = new CommandLine(cliArgs);
+        var parseResult = commandLine.parseArgs(args);
+
+        if (parseResult.isUsageHelpRequested()) {
+            commandLine.usage(System.out);
+            return;
+        }
+
+        if (parseResult.isVersionHelpRequested()) {
+            commandLine.printVersionHelp(System.out);
+            return;
+        }
+
+        var scope = BeanScope.builder().bean(CliArgs.class, cliArgs)
                 .shutdownHook(true)
                 .build();
 
