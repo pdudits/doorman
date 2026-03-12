@@ -14,16 +14,26 @@
  * limitations under the License.
  */
 
-package io.zeromagic.doorman;
+package io.zeromagic.doorman.cli;
 
-/**
- * Hello world!
- *
- */
-public class App
-{
-    public static void main( String[] args )
-    {
-        System.out.println( "Hello World!" );
+import io.avaje.inject.Bean;
+import io.avaje.inject.External;
+import io.avaje.inject.Factory;
+import picocli.CommandLine;
+
+import java.util.Optional;
+
+@Factory
+class ConfigProvider {
+    private final CliArgs args;
+
+    protected ConfigProvider(@External RawArgs args) {
+        var cmdline = new CommandLine(new CliArgs()).parseArgs(args.args()).asCommandLineList();
+        this.args = cmdline.getFirst().getCommand();
+    }
+
+    @Bean
+    Optional<KubernetesConfig> kubernetesConfig() {
+        return Optional.ofNullable(args.kubeContext).map(KubernetesConfig::new);
     }
 }
