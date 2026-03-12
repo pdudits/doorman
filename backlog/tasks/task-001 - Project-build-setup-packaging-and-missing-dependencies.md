@@ -1,10 +1,10 @@
 ---
 id: TASK-001
 title: 'Project build setup: packaging and missing dependencies'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-03-12 11:25'
-updated_date: '2026-03-12 12:28'
+updated_date: '2026-03-12 12:45'
 labels:
   - build
   - setup
@@ -45,6 +45,12 @@ Also make `--help`/`--version` work gracefully through picocli’s standard opti
 4. Enhance the picocli `CliArgs` declaration so `--help` and `--version` are supported and the CLI exits cleanly when they’re requested.
 5. Verify the build with `mvn clean package` and confirm `java -jar target/doorman-shaded.jar --help` prints usage and exits.
 <!-- SECTION:PLAN:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Updated dependencies, logging, shade plugin, and CLI wiring so the build now produces a JSON-logging shaded JAR with working picocli help/version options.
+<!-- SECTION:FINAL_SUMMARY:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->

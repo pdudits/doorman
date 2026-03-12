@@ -1,0 +1,27 @@
+apiVersion: doorman.zeromagic.io/v1alpha1
+kind: ScalingPolicy
+metadata:
+  name: example-api
+  namespace: default
+spec:
+  serviceName: example-api
+  deploymentName: example-api
+status:
+  phase: Running
+  targetReplicas: 3
+  lastTransitionTime: "2026-03-12T12:40:00Z"
+  message: "3 replicas available"
+---
+apiVersion: doorman.zeromagic.io/v1alpha1
+kind: ScalingPolicy
+metadata:
+  name: batch-worker
+  namespace: default
+spec:
+  serviceName: batch-worker
+  deploymentName: batch-worker
+status:
+  phase: Stopped
+  targetReplicas: 0
+  lastTransitionTime: "2026-03-12T12:41:00Z"
+  message: "Manually scaled to zero"
