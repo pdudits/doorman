@@ -1,0 +1,17 @@
+project_name: "doorman"
+default_status: "To Do"
+statuses: ["To Do", "In Progress", "Done"]
+labels: []
+definition_of_done: ["All aceptance criteria covered, or rejected with explanation", "Code is compiling and unit test verifies its relevant functionality", "An integration test is written, or a task describing the test scenario is in the backlog"]
+date_format: yyyy-mm-dd
+max_column_width: 20
+default_editor: "vim"
+auto_open_browser: true
+default_port: 6420
+remote_operations: false
+auto_commit: false
+zero_padded_ids: 3
+bypass_git_hooks: false
+check_active_branches: false
+active_branch_days: 30
+task_prefix: "task"
