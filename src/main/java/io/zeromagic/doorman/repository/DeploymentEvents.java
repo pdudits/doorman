@@ -14,17 +14,10 @@
  * limitations under the License.
  */
 
-package io.zeromagic.doorman.cli;
+package io.zeromagic.doorman.repository;
 
-import picocli.CommandLine;
+import io.fabric8.kubernetes.api.model.apps.Deployment;
 
-@CommandLine.Command(name = "doorman", mixinStandardHelpOptions = true)
-public class CliArgs {
-    @CommandLine.Option(names = "--kube-context")
-    String kubeContext;
-
-    @CommandLine.Option(names = "--pod-ip",
-            description = "IP address Doorman registers as a service endpoint. " +
-                    "Defaults to POD_IP env var (Downward API). Required when running outside a cluster.")
-    String podIp;
+public interface DeploymentEvents {
+    void onDeploymentChanged(Deployment deployment);
 }

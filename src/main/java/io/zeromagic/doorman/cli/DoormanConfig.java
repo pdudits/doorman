@@ -16,15 +16,9 @@
 
 package io.zeromagic.doorman.cli;
 
-import picocli.CommandLine;
-
-@CommandLine.Command(name = "doorman", mixinStandardHelpOptions = true)
-public class CliArgs {
-    @CommandLine.Option(names = "--kube-context")
-    String kubeContext;
-
-    @CommandLine.Option(names = "--pod-ip",
-            description = "IP address Doorman registers as a service endpoint. " +
-                    "Defaults to POD_IP env var (Downward API). Required when running outside a cluster.")
-    String podIp;
+/**
+ * Runtime identity of this Doorman instance.
+ * podIp is used when registering Doorman as a service endpoint.
+ */
+public record DoormanConfig(String podIp) {
 }

@@ -23,21 +23,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Singleton
-public class ServiceInfromer implements ResourceEventHandler<Service> {
-    private static final Logger LOG = LoggerFactory.getLogger(ServiceInfromer.class);
+public class ServiceInformer implements ResourceEventHandler<Service> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ServiceInformer.class);
 
     @Override
     public void onAdd(Service obj) {
-        LOG.info("Adding service: " + obj.getMetadata().getName());
+        LOG.info("Service ADDED: {}/{}", obj.getMetadata().getNamespace(), obj.getMetadata().getName());
     }
 
     @Override
     public void onUpdate(Service oldObj, Service newObj) {
-
+        LOG.info("Service UPDATED: {}/{}", newObj.getMetadata().getNamespace(), newObj.getMetadata().getName());
     }
 
     @Override
     public void onDelete(Service obj, boolean deletedFinalStateUnknown) {
-
+        LOG.info("Service DELETED: {}/{}", obj.getMetadata().getNamespace(), obj.getMetadata().getName());
     }
 }

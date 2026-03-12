@@ -1,10 +1,10 @@
 ---
 id: TASK-003
 title: 'Kubernetes resource watchers: ScalingPolicy, Deployment, EndpointSlice'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-03-12 11:26'
-updated_date: '2026-03-12 11:33'
+updated_date: '2026-03-12 14:11'
 labels:
   - kubernetes
   - watchers
@@ -30,14 +30,33 @@ Use Fabric8's informer/watcher API. The `repository` package should maintain a c
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Doorman starts watching `ScalingPolicy` resources cluster-wide on startup; creates/updates/deletes trigger appropriate state transitions
-- [ ] #2 Doorman watches `Deployment` resources; ready replica count changes trigger state transitions (especially: all replicas ready after scale-up)
-- [ ] #3 Doorman watches `EndpointSlice` resources to track when real application endpoints have drained (for newer clusters / Traefik v3)
-- [ ] #4 Doorman watches `Endpoints` resources to track drain for older clusters / Traefik v2 compatibility
-- [ ] #5 All watchers reconnect/retry automatically on connection loss (Fabric8 handles this, but must be wired correctly)
-- [ ] #6 Watcher events are logged at INFO level with resource name/namespace/event type
+- [x] #1 Doorman starts watching `ScalingPolicy` resources cluster-wide on startup; creates/updates/deletes trigger appropriate state transitions
+- [x] #2 Doorman watches `Deployment` resources; ready replica count changes trigger state transitions (especially: all replicas ready after scale-up)
+- [x] #3 Doorman watches `EndpointSlice` resources to track when real application endpoints have drained (for newer clusters / Traefik v3)
+- [x] #4 Doorman watches `Endpoints` resources to track drain for older clusters / Traefik v2 compatibility
+- [x] #5 All watchers reconnect/retry automatically on connection loss (Fabric8 handles this, but must be wired correctly)
+- [x] #6 Watcher events are logged at INFO level with resource name/namespace/event type
 - [ ] #7 The `repository` package holds a thread-safe in-memory map of currently managed ScalingPolicies (keyed by namespace/name)
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Implemented four `ResourceEventHandler<T>` informers auto-discovered by `InformerHandler`:
+
+- **ScalingPolicyInformer** — delegates to `ScalingPolicyEvents` (onAdded/onUpdated/onDeleted)
+- **DeploymentInformer** — delegates to `DeploymentEvents` (onDeploymentChanged)
+- **EndpointsInformer** — classic Endpoints API (Traefik v2); detects real drain, Doorman removal, and real-ready; delegates to `EndpointsEvents`
+- **EndpointSliceInformer** — EndpointSlice API (Traefik v3+); same three signals via `EndpointSliceEvents`
+
+All four event interfaces are defined with no-op stub `NoOpDomainEvents` so the app compiles and runs without Task-004.
+
+Also added `--pod-ip` CLI option (+ `POD_IP` env var fallback) to `CliArgs`/`ConfigProvider`/`DoormanConfig` so informers can identify Doorman's own endpoint.
+
+Fixed typo: `ServiceInfromer` → `ServiceInformer`.
+
+AC #7 (thread-safe registry) is deferred to Task-004.
+<!-- SECTION:FINAL_SUMMARY:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->

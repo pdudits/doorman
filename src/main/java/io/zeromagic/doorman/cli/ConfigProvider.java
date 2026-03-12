@@ -28,4 +28,14 @@ class ConfigProvider {
     Optional<KubernetesConfig> kubernetesConfig(@External CliArgs args) {
         return Optional.ofNullable(args.kubeContext).map(KubernetesConfig::new);
     }
+
+    @Bean
+    DoormanConfig doormanConfig(@External CliArgs args) {
+        String ip = args.podIp != null ? args.podIp : System.getenv("POD_IP");
+        if (ip == null || ip.isBlank()) {
+            throw new IllegalStateException(
+                    "Doorman pod IP is not configured. Set --pod-ip or expose POD_IP via the Downward API.");
+        }
+        return new DoormanConfig(ip);
+    }
 }

@@ -34,12 +34,13 @@ public class LogbackConfigurator extends ContextAwareBase implements Configurato
         JsonEncoder encoder = new JsonEncoder();
         encoder.setContext(loggerContext);
         encoder.setWithTimestamp(true);
-        encoder.setWithSequenceNumber(true);
         encoder.setWithLevel(true);
         encoder.setWithThreadName(true);
         encoder.setWithLoggerName(true);
-        encoder.setWithMessage(true);
+        encoder.setWithMessage(false);
+        encoder.setWithFormattedMessage(true);
         encoder.setWithThrowable(true);
+        encoder.setWithMDC(true);
         encoder.start();
 
         ConsoleAppender<ILoggingEvent> consoleAppender = new ConsoleAppender<>();
