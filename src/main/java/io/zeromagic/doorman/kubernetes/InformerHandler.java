@@ -55,7 +55,14 @@ class InformerHandler implements  AutoCloseable {
                 .getActualTypeArguments()[0];
 
             //noinspection unchecked
-            this.informers.add(client.resources((Class<? extends HasMetadata>)resourceType).inform(informer));
+            var operation = client.resources((Class<? extends HasMetadata>) resourceType);
+            var scoped = informer instanceof NamespaceRestricted ns
+                    ? operation.inNamespace(ns.namespace())
+                    : operation;
+            var filtered = (informer instanceof LabelRestricted ls)
+                    ? scoped.withLabelSelector(ls.labelSelector())
+                    : scoped;
+            this.informers.add(filtered.inform(informer));
         }
     }
 
