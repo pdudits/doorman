@@ -1,9 +1,10 @@
 ---
 id: TASK-007.02
 title: 'IngressRouteIndex: resolve Host+path prefix to (namespace, serviceName)'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-03-13 20:26'
+updated_date: '2026-03-13 20:49'
 labels:
   - proxy
   - kubernetes
@@ -49,18 +50,28 @@ New `@Singleton` class implementing `ScalingPolicyEvents` that builds a routing 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 onAdded/onUpdated fetches the Ingress via facade.getIngress() and indexes all host+pathPrefix rules where backend.service.name == spec.serviceName
-- [ ] #2 onDeleted removes all route entries for that policy
-- [ ] #3 resolve(host, path) returns the correct RouteTarget using longest-prefix match on path
-- [ ] #4 resolve returns empty for unknown host or path
-- [ ] #5 Unit tests cover: basic resolution, longest-prefix wins, deleted policy entries are removed, missing Ingress logs a warning and adds no entries
+- [x] #1 onAdded/onUpdated fetches the Ingress via facade.getIngress() and indexes all host+pathPrefix rules where backend.service.name == spec.serviceName
+- [x] #2 onDeleted removes all route entries for that policy
+- [x] #3 resolve(host, path) returns the correct RouteTarget using longest-prefix match on path
+- [x] #4 resolve returns empty for unknown host or path
+- [x] #5 Unit tests cover: basic resolution, longest-prefix wins, deleted policy entries are removed, missing Ingress logs a warning and adds no entries
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Created 3 new files in proxy/ package:
+- `RouteTarget.java` — record(namespace, serviceName)
+- `HostRoutes.java` — package-private class owning a List<RouteEntry> sorted descending by pathPrefix.length(), protected by ReentrantReadWriteLock. Methods: add(), remove(), resolve(path), isEmpty().
+- `IngressRouteIndex.java` — @Singleton implementing ScalingPolicyEvents. ConcurrentHashMap<host, HostRoutes> as primary index; ConcurrentHashMap<policyKey, List<RouteKey>> for clean deletion. onAdded/onUpdated fetches Ingress via facade, walks rules/paths for matching service name, inserts sorted. Default backends (no host) skipped. onDeleted removes tracked entries. resolve() strips port from host, delegates to HostRoutes.resolve() for first-match = longest-prefix.
+- 10 unit tests covering: basic match, longest-prefix wins, unknown host, unmatched path, onDeleted, onUpdated replaces, host:port stripping, blank ingressName, ingress not found, service not in ingress. All green.
+<!-- SECTION:FINAL_SUMMARY:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 All aceptance criteria covered
+- [x] #1 All aceptance criteria covered
 - [ ] #2 or rejected with explanation
-- [ ] #3 Code is compiling and unit test verifies its relevant functionality
+- [x] #3 Code is compiling and unit test verifies its relevant functionality
 - [ ] #4 An integration test is written
-- [ ] #5 or a task describing the test scenario is in the backlog
+- [x] #5 or a task describing the test scenario is in the backlog
 <!-- DOD:END -->
