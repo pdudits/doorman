@@ -18,17 +18,17 @@ package io.zeromagic.doorman.traffic;
 
 import io.avaje.inject.Bean;
 import io.avaje.inject.Factory;
-import io.fabric8.kubernetes.client.KubernetesClient;
+import io.zeromagic.doorman.kubernetes.KubernetesFacade;
 import io.zeromagic.doorman.cli.TraefikConfig;
 
 @Factory
 class TrafficFactory {
 
     @Bean(autoCloseable = true)
-    MetricsEndpointSource metricsEndpointSource(TraefikConfig config, KubernetesClient client) {
+    MetricsEndpointSource metricsEndpointSource(TraefikConfig config, KubernetesFacade facade) {
         return switch (config) {
             case TraefikConfig.Direct d -> new FixedMetricsEndpointSource(d);
-            case TraefikConfig.Discovered disc -> new KubernetesPodMetricsEndpointSource(disc, client);
+            case TraefikConfig.Discovered disc -> new KubernetesPodMetricsEndpointSource(disc, facade);
         };
     }
 }

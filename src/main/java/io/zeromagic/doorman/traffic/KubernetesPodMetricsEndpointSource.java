@@ -17,11 +17,9 @@
 package io.zeromagic.doorman.traffic;
 
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 import io.zeromagic.doorman.cli.TraefikConfig;
-import io.zeromagic.doorman.kubernetes.LabelRestricted;
-import io.zeromagic.doorman.kubernetes.NamespaceRestricted;
+import io.zeromagic.doorman.kubernetes.KubernetesFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,11 +29,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Discovers Traefik pods by namespace + label selector and maintains a live list
- * of metrics endpoint URIs. Registers itself as an informer against the provided
- * {@link KubernetesClient} on construction and closes the informer on {@link #close()}.
+ * of metrics endpoint URIs. Registers itself as a pod informer via {@link KubernetesFacade}
+ * on construction and closes the informer handle on {@link #close()}.
  */
 public class KubernetesPodMetricsEndpointSource
-        implements MetricsEndpointSource, AutoCloseable {
+        implements MetricsEndpointSource, ResourceEventHandler<Pod>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(KubernetesPodMetricsEndpointSource.class);
 
@@ -43,37 +41,32 @@ public class KubernetesPodMetricsEndpointSource
     private final ConcurrentHashMap<String, URI> podEndpoints = new ConcurrentHashMap<>();
     private final AutoCloseable informerHandle;
 
-    public KubernetesPodMetricsEndpointSource(TraefikConfig.Discovered config, KubernetesClient client) {
+    public KubernetesPodMetricsEndpointSource(TraefikConfig.Discovered config, KubernetesFacade facade) {
         this.config = config;
-        this.informerHandle = client.resources(Pod.class)
-                .inNamespace(config.namespace())
-                .withLabelSelector(config.labelSelector())
-                .inform(new ResourceEventHandler<Pod>() {
-                    @Override
-                    public void onAdd(Pod obj) {
-                        register(obj);
-                    }
+        this.informerHandle = facade.inform(Pod.class, config.namespace(), config.labelSelector(), this);
+    }
 
-                    @Override
-                    public void onUpdate(Pod oldObj, Pod newObj) {
-                        register(newObj);
-                    }
+    @Override
+    public void onAdd(Pod pod) {
+        register(pod);
+    }
 
-                    @Override
-                    public void onDelete(Pod obj, boolean deletedFinalStateUnknown) {
-                        String name = pod.getMetadata().getName();
-                        podEndpoints.remove(name);
-                        LOG.debug("Removed metrics endpoint for pod {}", name);
-                    }
-                });
+    @Override
+    public void onUpdate(Pod oldPod, Pod newPod) {
+        register(newPod);
+    }
+
+    @Override
+    public void onDelete(Pod pod, boolean deletedFinalStateUnknown) {
+        String name = pod.getMetadata().getName();
+        podEndpoints.remove(name);
+        LOG.debug("Removed metrics endpoint for pod {}", name);
     }
 
     private void register(Pod pod) {
         String name = pod.getMetadata().getName();
         String ip = pod.getStatus() != null ? pod.getStatus().getPodIP() : null;
-        if (ip == null || ip.isBlank()) {
-            return;
-        }
+        if (ip == null || ip.isBlank()) return;
         URI uri = URI.create("http://" + ip + ":" + config.metricsPort() + "/metrics");
         podEndpoints.put(name, uri);
         LOG.debug("Registered metrics endpoint for pod {}: {}", name, uri);

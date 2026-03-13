@@ -18,6 +18,9 @@ package io.zeromagic.doorman.repository;
 
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
+import io.avaje.inject.PostConstruct;
+import io.avaje.inject.PreDestroy;
+import io.zeromagic.doorman.kubernetes.KubernetesFacade;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +29,23 @@ import org.slf4j.LoggerFactory;
 public class ServiceInformer implements ResourceEventHandler<Service> {
 
     private static final Logger LOG = LoggerFactory.getLogger(ServiceInformer.class);
+
+    private final KubernetesFacade facade;
+    private AutoCloseable informerHandle;
+
+    ServiceInformer(KubernetesFacade facade) {
+        this.facade = facade;
+    }
+
+    @PostConstruct
+    void start() {
+        informerHandle = facade.inform(Service.class, this);
+    }
+
+    @PreDestroy
+    void close() throws Exception {
+        if (informerHandle != null) informerHandle.close();
+    }
 
     @Override
     public void onAdd(Service obj) {

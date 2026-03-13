@@ -17,6 +17,9 @@
 package io.zeromagic.doorman.repository;
 
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
+import io.avaje.inject.PostConstruct;
+import io.avaje.inject.PreDestroy;
+import io.zeromagic.doorman.kubernetes.KubernetesFacade;
 import io.zeromagic.doorman.repository.crd.ScalingPolicy;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -28,9 +31,22 @@ public class ScalingPolicyInformer implements ResourceEventHandler<ScalingPolicy
     private static final Logger LOG = LoggerFactory.getLogger(ScalingPolicyInformer.class);
 
     private final ScalingPolicyEvents events;
+    private final KubernetesFacade facade;
+    private AutoCloseable informerHandle;
 
-    ScalingPolicyInformer(ScalingPolicyEvents events) {
+    ScalingPolicyInformer(ScalingPolicyEvents events, KubernetesFacade facade) {
         this.events = events;
+        this.facade = facade;
+    }
+
+    @PostConstruct
+    void start() {
+        informerHandle = facade.inform(ScalingPolicy.class, this);
+    }
+
+    @PreDestroy
+    void close() throws Exception {
+        if (informerHandle != null) informerHandle.close();
     }
 
     @Override

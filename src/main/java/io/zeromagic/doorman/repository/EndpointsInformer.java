@@ -18,7 +18,10 @@ package io.zeromagic.doorman.repository;
 
 import io.fabric8.kubernetes.api.model.Endpoints;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
+import io.avaje.inject.PostConstruct;
+import io.avaje.inject.PreDestroy;
 import io.zeromagic.doorman.cli.DoormanConfig;
+import io.zeromagic.doorman.kubernetes.KubernetesFacade;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,10 +43,23 @@ public class EndpointsInformer implements ResourceEventHandler<Endpoints> {
 
     private final EndpointsEvents events;
     private final String doormanIp;
+    private final KubernetesFacade facade;
+    private AutoCloseable informerHandle;
 
-    EndpointsInformer(EndpointsEvents events, DoormanConfig config) {
+    EndpointsInformer(EndpointsEvents events, DoormanConfig config, KubernetesFacade facade) {
         this.events = events;
         this.doormanIp = config.podIp();
+        this.facade = facade;
+    }
+
+    @PostConstruct
+    void start() {
+        informerHandle = facade.inform(Endpoints.class, this);
+    }
+
+    @PreDestroy
+    void close() throws Exception {
+        if (informerHandle != null) informerHandle.close();
     }
 
     @Override

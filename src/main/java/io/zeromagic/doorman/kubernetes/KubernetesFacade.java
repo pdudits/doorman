@@ -16,11 +16,22 @@
 
 package io.zeromagic.doorman.kubernetes;
 
-
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 
-// this is just collecting our needs of kubernetes client, we should merge all of these interfaces into single one
-public interface KubernetesFacade extends EndpointRegistrar, DeploymentStateReader, ScalingPolicyStatusPatcher, ServiceScaler{
-    <T extends HasMetadata> AutoCloseable inform(Class<T> resourceType, String namespace, String labelSelectors, ResourceEventHandler<T> handler);
+/**
+ * Single interface to all Kubernetes operations needed by Doorman.
+ * The production implementation is {@link KubernetesClientFacade}.
+ */
+public interface KubernetesFacade extends EndpointRegistrar, DeploymentStateReader, ScalingPolicyStatusPatcher, ServiceScaler {
+
+    /** Watch resources of the given type, optionally scoped to namespace and/or label selector. */
+    <T extends HasMetadata> AutoCloseable inform(
+            Class<T> resourceType, String namespace, String labelSelector, ResourceEventHandler<T> handler);
+
+    /** Watch resources cluster-wide with no label filter. */
+    default <T extends HasMetadata> AutoCloseable inform(
+            Class<T> resourceType, ResourceEventHandler<T> handler) {
+        return inform(resourceType, null, null, handler);
+    }
 }
