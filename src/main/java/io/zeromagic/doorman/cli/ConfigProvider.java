@@ -38,4 +38,21 @@ class ConfigProvider {
         }
         return new DoormanConfig(ip);
     }
+
+    @Bean
+    TraefikConfig traefikConfig(@External CliArgs args) {
+        if (args.traefikMetricsUrl != null && !args.traefikMetricsUrl.isBlank()) {
+            return new TraefikConfig.Direct(args.traefikMetricsUrl, args.idleTimeout, args.metricsPollInterval);
+        }
+        if (args.traefikNamespace != null && !args.traefikNamespace.isBlank()
+                && args.traefikLabelSelector != null && !args.traefikLabelSelector.isBlank()) {
+            return new TraefikConfig.Discovered(
+                    args.traefikNamespace, args.traefikLabelSelector, args.traefikMetricsPort,
+                    args.idleTimeout, args.metricsPollInterval);
+        }
+        throw new IllegalStateException(
+                "Traefik metrics source is not configured. " +
+                "Provide --traefik-metrics-url for single-endpoint mode, " +
+                "or both --traefik-namespace and --traefik-label-selector for pod-discovery mode.");
+    }
 }

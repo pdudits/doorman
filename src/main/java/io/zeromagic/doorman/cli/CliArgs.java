@@ -27,4 +27,32 @@ public class CliArgs {
             description = "IP address Doorman registers as a service endpoint. " +
                     "Defaults to POD_IP env var (Downward API). Required when running outside a cluster.")
     String podIp;
+
+    @CommandLine.Option(names = "--traefik-metrics-url",
+            description = "Single Traefik metrics endpoint URL (e.g. http://traefik:9100/metrics). " +
+                    "Mutually exclusive with --traefik-namespace/--traefik-label-selector.")
+    String traefikMetricsUrl;
+
+    @CommandLine.Option(names = "--traefik-namespace",
+            description = "Kubernetes namespace to discover Traefik pods for metrics scraping.")
+    String traefikNamespace;
+
+    @CommandLine.Option(names = "--traefik-label-selector",
+            description = "Label selector for Traefik pods (e.g. 'app=traefik').")
+    String traefikLabelSelector;
+
+    @CommandLine.Option(names = "--traefik-metrics-port",
+            description = "Port to scrape on each discovered Traefik pod (default: 9100).",
+            defaultValue = "9100")
+    int traefikMetricsPort;
+
+    @CommandLine.Option(names = "--idle-timeout",
+            description = "Global idle timeout before a service is scaled to zero (default: 5m).",
+            defaultValue = "5m")
+    String idleTimeout;
+
+    @CommandLine.Option(names = "--metrics-poll-interval",
+            description = "How often to poll Traefik metrics (default: 15s).",
+            defaultValue = "15s")
+    String metricsPollInterval;
 }
