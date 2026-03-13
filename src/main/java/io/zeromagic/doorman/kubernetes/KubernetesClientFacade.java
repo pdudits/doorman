@@ -19,6 +19,7 @@ package io.zeromagic.doorman.kubernetes;
 import io.avaje.inject.PreDestroy;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
@@ -103,6 +104,14 @@ class KubernetesClientFacade implements KubernetesFacade {
         } catch (Exception e) {
             LOG.warn("Failed to patch status for ScalingPolicy {}/{}: {}", namespace, name, e.getMessage());
         }
+    }
+
+    // ── Ingress lookup ────────────────────────────────────────────────────────
+
+    @Override
+    public Optional<Ingress> getIngress(String namespace, String name) {
+        return Optional.ofNullable(
+                client.network().v1().ingresses().inNamespace(namespace).withName(name).get());
     }
 
     // ── EndpointRegistrar (stub — Task-006) ───────────────────────────────────

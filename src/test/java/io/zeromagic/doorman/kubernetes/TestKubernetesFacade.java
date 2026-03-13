@@ -17,6 +17,7 @@
 package io.zeromagic.doorman.kubernetes;
 
 import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 import io.zeromagic.doorman.repository.crd.ScalingPolicyPhase;
 
@@ -33,6 +34,7 @@ import java.util.Optional;
 public class TestKubernetesFacade implements KubernetesFacade {
 
     private final Map<Class<?>, ResourceEventHandler<?>> handlers = new HashMap<>();
+    private final Map<String, Ingress> ingresses = new HashMap<>();
 
     @Override
     public <T extends HasMetadata> AutoCloseable inform(
@@ -67,4 +69,20 @@ public class TestKubernetesFacade implements KubernetesFacade {
     @Override public void deregister(String namespace, String serviceName) {}
     @Override public void scaleUp(String namespace, String deploymentName, int targetReplicas) {}
     @Override public void scaleDown(String namespace, String deploymentName) {}
+
+    // ── Ingress stubs ─────────────────────────────────────────────────────────
+
+    public void stubIngress(Ingress ingress) {
+        String key = ingress.getMetadata().getNamespace() + "/" + ingress.getMetadata().getName();
+        ingresses.put(key, ingress);
+    }
+
+    public void removeIngress(String namespace, String name) {
+        ingresses.remove(namespace + "/" + name);
+    }
+
+    @Override
+    public Optional<Ingress> getIngress(String namespace, String name) {
+        return Optional.ofNullable(ingresses.get(namespace + "/" + name));
+    }
 }

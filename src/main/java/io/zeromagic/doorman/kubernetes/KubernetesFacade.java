@@ -17,7 +17,10 @@
 package io.zeromagic.doorman.kubernetes;
 
 import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
+
+import java.util.Optional;
 
 /**
  * Single interface to all Kubernetes operations needed by Doorman.
@@ -34,4 +37,7 @@ public interface KubernetesFacade extends EndpointRegistrar, DeploymentStateRead
             Class<T> resourceType, ResourceEventHandler<T> handler) {
         return inform(resourceType, null, null, handler);
     }
+
+    /** Fetch an Ingress resource by namespace and name. Returns empty if not found. */
+    Optional<Ingress> getIngress(String namespace, String name);
 }
