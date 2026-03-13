@@ -61,4 +61,9 @@ public class CliArgs {
                     "This port is registered in EndpointSlice/Endpoints when intercepting scaled-down services.",
             defaultValue = "8080")
     int proxyPort;
+
+    @CommandLine.Option(names = "--scale-up-timeout",
+            description = "Maximum time to wait for a service to become ready before returning 503 (default: 60s).",
+            defaultValue = "60s")
+    String scaleUpTimeout;
 }

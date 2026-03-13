@@ -50,7 +50,7 @@ class EndpointRegistrarIT {
     private static final String DOORMAN_IP = "10.42.99.99";
     private static final int    PROXY_PORT = 8080;
 
-    private static final DoormanConfig DOORMAN_CONFIG = new DoormanConfig(DOORMAN_IP, PROXY_PORT);
+    private static final DoormanConfig DOORMAN_CONFIG = new DoormanConfig(DOORMAN_IP, PROXY_PORT, Duration.ofSeconds(60));
 
     @RegisterExtension
     static final K3sClusterExtension K3S = new K3sClusterExtension("doorman-registrar-it");

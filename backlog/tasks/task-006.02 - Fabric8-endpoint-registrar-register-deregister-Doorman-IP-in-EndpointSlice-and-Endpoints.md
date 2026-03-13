@@ -3,10 +3,10 @@ id: TASK-006.02
 title: >-
   Fabric8 endpoint registrar: register/deregister Doorman IP in EndpointSlice
   and Endpoints
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-03-13 18:59'
-updated_date: '2026-03-13 19:02'
+updated_date: '2026-03-13 20:07'
 labels:
   - scaling
   - kubernetes
@@ -45,16 +45,29 @@ Key files: KubernetesClientFacade.java, ScaledApplicationRegistry.java, ConfigPr
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 register() adds Doorman IP to EndpointSlice labeled kubernetes.io/service-name=<svc> with proxy port; idempotent
-- [ ] #2 register() adds Doorman IP to classic Endpoints object (name=serviceName) with proxy port; idempotent
-- [ ] #3 deregister() removes Doorman IP from both EndpointSlice and classic Endpoints; idempotent
-- [ ] #4 ScaledApplicationRegistry calls registrar.register() after each confirmScaledDown() transition
-- [ ] #5 On startup, if deployment.spec.replicas==0 and phase is ScaledDown, registrar.register() is called immediately (AC#7 of parent)
-- [ ] #6 If podIp cannot be resolved from --pod-ip or POD_IP env, startup fails with a clear error
-- [ ] #7 Unit test: recording EndpointRegistrar stub verifies register() is called after confirmScaledDown
-- [ ] #8 IT test: k3s -- create Deployment + Service + ScalingPolicy; patch deployment to 0; assert Doorman IP in EndpointSlice + classic Endpoints; assert ScalingPolicy phase == ScaledDown
-- [ ] #9 Fight-back loop: when EndpointsInformer or EndpointSliceInformer detects Doorman IP is absent (Kubernetes removed it due to selector mismatch), registry calls registrar.register() again while app is ScaledDown or ScalingUp
+- [x] #1 register() adds Doorman IP to EndpointSlice labeled kubernetes.io/service-name=<svc> with proxy port; idempotent
+- [x] #2 register() adds Doorman IP to classic Endpoints object (name=serviceName) with proxy port; idempotent
+- [x] #3 deregister() removes Doorman IP from both EndpointSlice and classic Endpoints; idempotent
+- [x] #4 ScaledApplicationRegistry calls registrar.register() after each confirmScaledDown() transition
+- [x] #5 On startup, if deployment.spec.replicas==0 and phase is ScaledDown, registrar.register() is called immediately (AC#7 of parent)
+- [x] #6 If podIp cannot be resolved from --pod-ip or POD_IP env, startup fails with a clear error
+- [x] #7 Unit test: recording EndpointRegistrar stub verifies register() is called after confirmScaledDown
+- [x] #8 IT test: k3s -- create Deployment + Service + ScalingPolicy; patch deployment to 0; assert Doorman IP in EndpointSlice + classic Endpoints; assert ScalingPolicy phase == ScaledDown
+- [x] #9 Fight-back loop: when EndpointsInformer or EndpointSliceInformer detects Doorman IP is absent (Kubernetes removed it due to selector mismatch), registry calls registrar.register() again while app is ScaledDown or ScalingUp
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Implemented full endpoint registration/deregistration in KubernetesClientFacade:
+
+- `register()`: creates `doorman-<svc>` EndpointSlice (reusing existing service port definitions, replacing port with proxyPort) + adds to classic Endpoints. Both idempotent.
+- `deregister()`: deletes doorman EndpointSlice + removes Doorman IP from classic Endpoints subsets.
+- DoormanConfig injected via `@Inject` constructor.
+- ScaledApplicationRegistry wired: `register()` called after every `confirmScaledDown()` (3 paths) and on startup when initial state is `ScaledDown`.
+- 5 new unit tests; 3 new IT tests against k3s (register idempotency, deregister, registry integration).
+- ConfigProvider.java already validated podIp (done in TASK-006.01).
+<!-- SECTION:FINAL_SUMMARY:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->

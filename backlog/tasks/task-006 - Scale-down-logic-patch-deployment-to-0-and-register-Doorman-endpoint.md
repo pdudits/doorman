@@ -1,10 +1,10 @@
 ---
 id: TASK-006
 title: 'Scale-down logic: patch deployment to 0 and register Doorman endpoint'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-03-12 11:27'
-updated_date: '2026-03-12 11:33'
+updated_date: '2026-03-13 20:15'
 labels:
   - scaling
   - kubernetes
@@ -29,20 +29,30 @@ Doorman's own IP is resolved with this priority:
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 When idle timeout is exceeded for a managed service currently in `Running` phase, the deployment's `spec.replicas` is patched to 0 via Fabric8
-- [ ] #2 ScalingPolicy status is updated to `ScalingDown` before issuing the patch
-- [ ] #3 Doorman adds its own IP to the service's **EndpointSlice** AND the classic **Endpoints** object after the deployment is patched to 0
-- [ ] #4 EndpointSlice/Endpoints entries use the same port as the original service port and point to Doorman's proxy port
-- [ ] #5 Doorman's IP is resolved from `--pod-ip` CLI arg first, falling back to `MY_POD_IP` environment variable; startup fails with a clear error if neither is set
-- [ ] #6 Once the endpoint entries for Doorman are confirmed present in both resources, ScalingPolicy status transitions to `ScaledDown`
-- [ ] #7 If the deployment already has 0 replicas when a ScalingPolicy is first created, Doorman immediately registers itself and moves to `ScaledDown`
+- [x] #1 When idle timeout is exceeded for a managed service currently in `Running` phase, the deployment's `spec.replicas` is patched to 0 via Fabric8
+- [x] #2 ScalingPolicy status is updated to `ScalingDown` before issuing the patch
+- [x] #3 Doorman adds its own IP to the service's **EndpointSlice** AND the classic **Endpoints** object after the deployment is patched to 0
+- [x] #4 EndpointSlice/Endpoints entries use the same port as the original service port and point to Doorman's proxy port
+- [x] #5 Doorman's IP is resolved from `--pod-ip` CLI arg first, falling back to `MY_POD_IP` environment variable; startup fails with a clear error if neither is set
+- [x] #6 Once the endpoint entries for Doorman are confirmed present in both resources, ScalingPolicy status transitions to `ScaledDown`
+- [x] #7 If the deployment already has 0 replicas when a ScalingPolicy is first created, Doorman immediately registers itself and moves to `ScaledDown`
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+All scale-down logic implemented across two subtasks:
+
+**TASK-006.01** — KubernetesClientFacade.scaleDown() patches Deployment spec.replicas=0 via Fabric8. ScaledApplicationRegistry.beginScalingDown() wired to call scaler.scaleDown(). --proxy-port CLI arg added (default 8080), exposed via DoormanConfig. Unit + IT tests green.
+
+**TASK-006.02** — EndpointRegistrar register()/deregister() implemented for both EndpointSlice (doorman-<svc> slice) and classic Endpoints. Idempotent. Fight-back loop wired via EndpointsInformer/EndpointSliceInformer. ScaledApplicationRegistry calls register() after every confirmScaledDown() and on startup when initial state is ScaledDown. Startup fails with clear error if podIp unresolvable. Unit + IT tests green (register idempotency, deregister, registry integration).
+<!-- SECTION:FINAL_SUMMARY:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 All aceptance criteria covered
+- [x] #1 All aceptance criteria covered
 - [ ] #2 or rejected with explanation
-- [ ] #3 Code is compiling and unit test verifies its relevant functionality
-- [ ] #4 An integration test is written
+- [x] #3 Code is compiling and unit test verifies its relevant functionality
+- [x] #4 An integration test is written
 - [ ] #5 or a task describing the test scenario is in the backlog
 <!-- DOD:END -->

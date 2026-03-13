@@ -19,6 +19,7 @@ package io.zeromagic.doorman.kubernetes;
 import io.zeromagic.doorman.cli.DoormanConfig;
 import io.zeromagic.doorman.cli.KubernetesConfig;
 
+import java.time.Duration;
 import java.util.Optional;
 
 /**
@@ -27,7 +28,7 @@ import java.util.Optional;
  */
 public class KubernetesClientFacadeAccessor {
 
-    private static final DoormanConfig DUMMY_CONFIG = new DoormanConfig("0.0.0.0", 8080);
+    private static final DoormanConfig DUMMY_CONFIG = new DoormanConfig("0.0.0.0", 8080, Duration.ofSeconds(60));
 
     private KubernetesClientFacadeAccessor() {}
 

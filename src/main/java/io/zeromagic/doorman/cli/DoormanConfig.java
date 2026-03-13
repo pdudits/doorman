@@ -20,6 +20,7 @@ package io.zeromagic.doorman.cli;
  * Runtime identity of this Doorman instance.
  * podIp is used when registering Doorman as a service endpoint.
  * proxyPort is the port Doorman's HTTP proxy listens on (registered in endpoints).
+ * scaleUpTimeout is the maximum time to wait for a service to become ready before returning 503.
  */
-public record DoormanConfig(String podIp, int proxyPort) {
+public record DoormanConfig(String podIp, int proxyPort, java.time.Duration scaleUpTimeout) {
 }
