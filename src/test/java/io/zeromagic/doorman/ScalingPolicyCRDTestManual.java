@@ -16,83 +16,40 @@
 
 package io.zeromagic.doorman;
 
-import io.fabric8.kubernetes.api.model.Namespace;
-import io.fabric8.kubernetes.api.model.NamespaceBuilder;
-import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.zeromagic.doorman.repository.crd.ScalingPolicy;
 import io.zeromagic.doorman.repository.crd.ScalingPolicySpec;
 import org.junit.jupiter.api.Test;
-
-import java.io.File;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 class ScalingPolicyCRDTestManual {
 
+    @RegisterExtension
+    static final DoormanClusterExtension CLUSTER = new DoormanClusterExtension("0000-0000");
+
     @Test
     void ensureScalingPolicyCrdAndResourceManual() throws Exception {
-        try (KubernetesClient client = new KubernetesClientBuilder().build()) {
-            var namespaceName = "0000-0000";
-            boolean createdCrd = false;
-            boolean createdNs = false;
-            ScalingPolicy createdPolicy = null;
+        var client = CLUSTER.client();
+        var ns = CLUSTER.namespace();
 
-            var crdClient = client.apiextensions().v1();
+        ScalingPolicy policy = new ScalingPolicy();
+        policy.setMetadata(new ObjectMetaBuilder()
+                .withName("manual-scalingpolicy")
+                .withNamespace(ns)
+                .build());
+        ScalingPolicySpec spec = new ScalingPolicySpec();
+        spec.setServiceName("manual-service");
+        spec.setDeploymentName("manual-deployment");
+        spec.setIngressName("manual-ingress");
+        policy.setSpec(spec);
 
-            try {
-                var existing = crdClient.customResourceDefinitions()
-                    .withName("scalingpolicies.doorman.zeromagic.io")
-                    .get();
-
-                if (existing == null) {
-                    File crdYaml = new File("deploy/scalingpolicy-crd.yaml");
-                    crdClient.customResourceDefinitions().load(crdYaml).create();
-                    createdCrd = true;
-                }
-
-                Namespace namespace = client.namespaces().withName(namespaceName).get();
-                if (namespace == null) {
-                    namespace = client.namespaces().create(new NamespaceBuilder()
-                        .withNewMetadata().withName(namespaceName).endMetadata().build());
-                    createdNs = true;
-                }
-
-                ScalingPolicy policy = new ScalingPolicy();
-                ObjectMeta meta = new ObjectMetaBuilder()
-                    .withName("manual-scalingpolicy")
-                    .withNamespace(namespaceName)
-                    .build();
-                policy.setMetadata(meta);
-                ScalingPolicySpec spec = new ScalingPolicySpec();
-                spec.setServiceName("manual-service");
-                spec.setDeploymentName("manual-deployment");
-                spec.setIngressName("manual-ingress");
-
-                policy.setSpec(spec);
-
-                createdPolicy = client.resources(ScalingPolicy.class)
-                    .inNamespace(namespaceName)
-                    .create(policy);
-
-                spec.setIdleTimeout("10m");
-                client.resource(policy).update();
-            } finally {
-                if (createdPolicy != null) {
-                    client.resources(ScalingPolicy.class)
-                        .inNamespace("0000-0000")
-                        .withName("manual-scalingpolicy")
-                        .delete();
-                }
-                if (createdNs) {
-                    client.namespaces().withName(namespaceName).delete();
-                }
-                if (createdCrd) {
-                    crdClient.customResourceDefinitions()
-                        .withName("scalingpolicies.doorman.zeromagic.io")
-                        .delete();
-                }
-            }
+        var created = client.resources(ScalingPolicy.class).inNamespace(ns).create(policy);
+        try {
+            spec.setIdleTimeout("10m");
+            client.resource(created).update();
+        } finally {
+            client.resources(ScalingPolicy.class).inNamespace(ns)
+                    .withName(created.getMetadata().getName()).delete();
         }
     }
 }
