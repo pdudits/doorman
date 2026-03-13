@@ -1,9 +1,10 @@
 ---
 id: TASK-007.03
 title: 'ProxyServer: Sun HTTP Server, hold + redirect'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-03-13 20:27'
+updated_date: '2026-03-13 22:53'
 labels:
   - proxy
   - http
@@ -77,6 +78,33 @@ The main proxy implementation using Sun HTTP Server and virtual threads.
 - [ ] #9 Unit tests cover: 307-immediate, 307-after-wait, 503-timeout, 404-unknown, 502-failed-future
 - [ ] #10 IT test in k3s or a dedicated backlog task created for the scenario
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Implemented `ProxyServer` in `src/main/java/io/zeromagic/doorman/proxy/ProxyServer.java`:
+- `@Singleton` with `@PostConstruct start()` / `@PreDestroy stop()` — Sun HTTP Server on virtual threads
+- Handler resolves route via `IngressRouteIndex`, calls `registry.awaitReady()`, responds 307/503/502/404
+- `Location` header preserves original scheme (via `X-Forwarded-Proto`), host (with port), path, and query string
+- Port is stripped from the `Host` header for route lookup so `example.test:12345` matches ingress rule `example.test`
+- Package-private test constructor accepts `scaleUpTimeoutMillis` and uses port 0 for random port
+
+**DNS trick — `TestDotResolverProvider` (JEP-418 / JEP 418 `InetAddressResolverProvider` SPI):**
+- `src/test/java/io/zeromagic/doorman/test/TestDotResolverProvider.java` resolves any `*.test` hostname to `InetAddress.getLoopbackAddress()`; delegates all other lookups to the builtin resolver
+- Registered via `src/test/resources/META-INF/services/java.net.spi.InetAddressResolverProvider`
+- Tests use real URLs like `http://example.test:PORT/path` — the JDK sets the `Host` header automatically
+- No `sun.*` system property hacks, no manual header manipulation
+- This resolver will also serve future end-to-end / system tests where services need real-looking hostnames
+
+5 unit tests using real `ScaledApplicationRegistry` state transitions:
+- `unknownRoute_returns404` — `unknown.test` not indexed
+- `runningService_returns307_immediately` — reader returns readyReplicas=1, future pre-completed
+- `scaledDownService_returns307_after_future_completes` — another thread fires `onDeploymentChanged` after 200ms
+- `scaleUpTimeout_returns503` — 150ms timeout, nothing completes future
+- `awaitReady_fails_returns502` — `onDeleted` removes service; `awaitReady` returns `failedFuture`
+
+All 130 unit tests pass.
+<!-- SECTION:FINAL_SUMMARY:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->

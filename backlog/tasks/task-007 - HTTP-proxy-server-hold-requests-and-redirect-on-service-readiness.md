@@ -1,10 +1,10 @@
 ---
 id: TASK-007
 title: 'HTTP proxy server: hold requests and redirect on service readiness'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-03-12 11:27'
-updated_date: '2026-03-12 11:33'
+updated_date: '2026-03-13 22:44'
 labels:
   - proxy
   - http
@@ -41,6 +41,17 @@ A single ScalingPolicy can match multiple host/path combos; all matching request
 - [ ] #9 Virtual threads are used (no thread pool sizing needed)
 - [ ] #10 Server shuts down cleanly on JVM shutdown hook
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+All three subtasks completed:
+- **007.01** — `--scale-up-timeout` CLI arg + `DoormanConfig.scaleUpTimeout()` 
+- **007.02** — `IngressRouteIndex`: Ingress-based host+path routing table with `HostRoutes` (RW-locked sorted prefix list)
+- **007.03** — `ProxyServer`: Sun HTTP Server on virtual threads; 307/503/502/404 responses with real state transitions
+
+130 unit tests pass. Proxy package is complete.
+<!-- SECTION:FINAL_SUMMARY:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
