@@ -16,19 +16,25 @@
 
 package io.zeromagic.doorman.repository;
 
+import io.zeromagic.doorman.kubernetes.EndpointRegistrar;
+
 /**
  * Events derived from the EndpointSlice API (Traefik v3+ / newer clusters).
- * Like {@link EndpointsEvents}, Kubernetes will remove Doorman's entry from
- * slices it does not own. The fight-back loop re-adds / recreates a
- * Doorman-owned slice on {@link #onDoormanEndpointRemoved}.
+ * Methods are named with "Slice" suffix to distinguish from the identically
+ * shaped {@link EndpointsEvents} (classic API). Both may fire for the same
+ * service — {@link EndpointRegistrar} implementations must be idempotent.
+ *
+ * Kubernetes will continuously remove Doorman's IP from slices it does not own
+ * because Doorman's pod lacks the service selector labels. The fight-back loop
+ * is triggered by {@link #onDoormanSliceRemoved}.
  */
 public interface EndpointSliceEvents {
     /** All real (non-Doorman) endpoints in all slices for the service have become not-ready. */
-    void onRealEndpointsDrained(String namespace, String serviceName);
+    void onRealSlicesDrained(String namespace, String serviceName);
 
     /** Doorman's own IP was removed from the EndpointSlice(s) for the service. */
-    void onDoormanEndpointRemoved(String namespace, String serviceName);
+    void onDoormanSliceRemoved(String namespace, String serviceName);
 
     /** At least one real (non-Doorman) endpoint is ready across the slices for the service. */
-    void onRealEndpointsReady(String namespace, String serviceName);
+    void onRealSlicesReady(String namespace, String serviceName);
 }

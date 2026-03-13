@@ -42,6 +42,7 @@ class InformerHandler implements  AutoCloseable {
     }
 
     @PostConstruct
+    @SuppressWarnings("raw")
     void registerInformers(BeanScope beanScope) {
         var informers = beanScope.list(ResourceEventHandler.class);
         for (ResourceEventHandler informer : informers) {

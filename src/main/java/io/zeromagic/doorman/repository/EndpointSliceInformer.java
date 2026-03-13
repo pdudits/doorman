@@ -31,7 +31,7 @@ import java.util.Objects;
  *
  * Kubernetes will continuously remove Doorman's IP from slices it does not own
  * because Doorman's pod lacks the service selector labels. The fight-back loop
- * is triggered by {@link EndpointSliceEvents#onDoormanEndpointRemoved}.
+ * is triggered by {@link EndpointSliceEvents#onDoormanSliceRemoved(String, String)}.
  *
  * Slices are filtered by the {@code kubernetes.io/service-name} label.
  */
@@ -65,7 +65,7 @@ public class EndpointSliceInformer implements ResourceEventHandler<EndpointSlice
         var svc = serviceNameOf(obj);
         if (svc == null) return;
         LOG.info("EndpointSlice DELETED: {}/{}", ns, svc);
-        events.onRealEndpointsDrained(ns, svc);
+        events.onRealSlicesDrained(ns, svc);
     }
 
     private void evaluate(EndpointSlice slice) {
@@ -87,12 +87,12 @@ public class EndpointSliceInformer implements ResourceEventHandler<EndpointSlice
         LOG.info("EndpointSlice {}/{}: doormanPresent={} realReady={}", ns, svc, doormanPresent, realReady);
 
         if (!doormanPresent) {
-            events.onDoormanEndpointRemoved(ns, svc);
+            events.onDoormanSliceRemoved(ns, svc);
         }
         if (realReady) {
-            events.onRealEndpointsReady(ns, svc);
+            events.onRealSlicesReady(ns, svc);
         } else {
-            events.onRealEndpointsDrained(ns, svc);
+            events.onRealSlicesDrained(ns, svc);
         }
     }
 

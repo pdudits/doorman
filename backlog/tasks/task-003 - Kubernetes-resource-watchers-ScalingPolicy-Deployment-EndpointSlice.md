@@ -4,7 +4,7 @@ title: 'Kubernetes resource watchers: ScalingPolicy, Deployment, EndpointSlice'
 status: Done
 assignee: []
 created_date: '2026-03-12 11:26'
-updated_date: '2026-03-12 14:11'
+updated_date: '2026-03-13 11:14'
 labels:
   - kubernetes
   - watchers
@@ -36,7 +36,7 @@ Use Fabric8's informer/watcher API. The `repository` package should maintain a c
 - [x] #4 Doorman watches `Endpoints` resources to track drain for older clusters / Traefik v2 compatibility
 - [x] #5 All watchers reconnect/retry automatically on connection loss (Fabric8 handles this, but must be wired correctly)
 - [x] #6 Watcher events are logged at INFO level with resource name/namespace/event type
-- [ ] #7 The `repository` package holds a thread-safe in-memory map of currently managed ScalingPolicies (keyed by namespace/name)
+- [x] #7 The `repository` package holds a thread-safe in-memory map of currently managed ScalingPolicies (keyed by namespace/name)
 <!-- AC:END -->
 
 ## Final Summary
