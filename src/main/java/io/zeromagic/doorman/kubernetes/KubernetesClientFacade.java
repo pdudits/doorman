@@ -17,22 +17,31 @@
 package io.zeromagic.doorman.kubernetes;
 
 import io.avaje.inject.PreDestroy;
+import io.fabric8.kubernetes.api.model.EndpointAddressBuilder;
+import io.fabric8.kubernetes.api.model.EndpointPortBuilder;
+import io.fabric8.kubernetes.api.model.EndpointSubsetBuilder;
+import io.fabric8.kubernetes.api.model.EndpointsBuilder;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.api.model.discovery.v1.EndpointBuilder;
+import io.fabric8.kubernetes.api.model.discovery.v1.EndpointSliceBuilder;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
+import io.zeromagic.doorman.cli.DoormanConfig;
 import io.zeromagic.doorman.cli.KubernetesConfig;
 import io.zeromagic.doorman.repository.crd.ScalingPolicy;
 import io.zeromagic.doorman.repository.crd.ScalingPolicyPhase;
 import io.zeromagic.doorman.repository.crd.ScalingPolicyStatus;
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -50,8 +59,11 @@ class KubernetesClientFacade implements KubernetesFacade {
     private static final Logger LOG = LoggerFactory.getLogger(KubernetesClientFacade.class);
 
     private final KubernetesClient client;
+    private final DoormanConfig doormanConfig;
 
-    KubernetesClientFacade(Optional<KubernetesConfig> config) {
+    @Inject
+    KubernetesClientFacade(Optional<KubernetesConfig> config, DoormanConfig doormanConfig) {
+        this.doormanConfig = doormanConfig;
         this.client = config
                 .map(c -> new KubernetesClientBuilder()
                         .withConfig(switch (c) {
@@ -117,16 +129,151 @@ class KubernetesClientFacade implements KubernetesFacade {
                 client.network().v1().ingresses().inNamespace(namespace).withName(name).get());
     }
 
-    // ── EndpointRegistrar (stub — Task-006) ───────────────────────────────────
+    // ── EndpointRegistrar (Task-006) ──────────────────────────────────────────
 
     @Override
     public void register(String namespace, String serviceName) {
-        LOG.info("[stub] register endpoint {}/{}", namespace, serviceName);
+        registerEndpointSlice(namespace, serviceName);
+        registerClassicEndpoints(namespace, serviceName);
+    }
+
+    private void registerEndpointSlice(String namespace, String serviceName) {
+        try {
+            String sliceName = "doorman-" + serviceName;
+
+            // Derive ports from existing service slices; fall back to a single proxy port
+            var existingSlices = client.discovery().v1().endpointSlices()
+                    .inNamespace(namespace)
+                    .withLabel("kubernetes.io/service-name", serviceName)
+                    .list().getItems();
+
+            var ports = existingSlices.stream()
+                    .filter(s -> !sliceName.equals(s.getMetadata().getName()))
+                    .flatMap(s -> s.getPorts() != null ? s.getPorts().stream() : java.util.stream.Stream.empty())
+                    .map(p -> new io.fabric8.kubernetes.api.model.discovery.v1.EndpointPortBuilder()
+                            .withName(p.getName())
+                            .withPort(doormanConfig.proxyPort())
+                            .withProtocol(p.getProtocol() != null ? p.getProtocol() : "TCP")
+                            .build())
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toList());
+
+            if (ports.isEmpty()) {
+                ports = List.of(new io.fabric8.kubernetes.api.model.discovery.v1.EndpointPortBuilder()
+                        .withName("http")
+                        .withPort(doormanConfig.proxyPort())
+                        .withProtocol("TCP")
+                        .build());
+            }
+
+            var existing = client.discovery().v1().endpointSlices()
+                    .inNamespace(namespace).withName(sliceName).get();
+
+            if (existing != null) {
+                boolean alreadyPresent = existing.getEndpoints() != null
+                        && existing.getEndpoints().stream()
+                        .anyMatch(e -> e.getAddresses() != null
+                                && e.getAddresses().contains(doormanConfig.podIp()));
+                if (alreadyPresent) return;
+                existing.getEndpoints().add(doormanEndpoint());
+                client.discovery().v1().endpointSlices()
+                        .inNamespace(namespace).resource(existing).update();
+            } else {
+                var slice = new EndpointSliceBuilder()
+                        .withNewMetadata()
+                            .withName(sliceName)
+                            .withNamespace(namespace)
+                            .addToLabels("kubernetes.io/service-name", serviceName)
+                        .endMetadata()
+                        .withAddressType("IPv4")
+                        .withEndpoints(doormanEndpoint())
+                        .withPorts(ports)
+                        .build();
+                client.discovery().v1().endpointSlices()
+                        .inNamespace(namespace).resource(slice).create();
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to register EndpointSlice for {}/{}: {}", namespace, serviceName, e.getMessage());
+        }
+    }
+
+    private io.fabric8.kubernetes.api.model.discovery.v1.Endpoint doormanEndpoint() {
+        return new EndpointBuilder()
+                .withAddresses(doormanConfig.podIp())
+                .withNewConditions()
+                    .withReady(true).withServing(true).withTerminating(false)
+                .endConditions()
+                .build();
+    }
+
+    private void registerClassicEndpoints(String namespace, String serviceName) {
+        try {
+            var existing = client.endpoints().inNamespace(namespace).withName(serviceName).get();
+            if (existing != null) {
+                boolean alreadyPresent = existing.getSubsets() != null
+                        && existing.getSubsets().stream()
+                        .flatMap(s -> s.getAddresses() != null ? s.getAddresses().stream() : java.util.stream.Stream.empty())
+                        .anyMatch(a -> doormanConfig.podIp().equals(a.getIp()));
+                if (alreadyPresent) return;
+                client.endpoints().inNamespace(namespace).withName(serviceName).edit(ep -> {
+                    if (ep.getSubsets() == null) ep.setSubsets(new java.util.ArrayList<>());
+                    ep.getSubsets().add(doormanSubset());
+                    return ep;
+                });
+            } else {
+                var ep = new EndpointsBuilder()
+                        .withNewMetadata().withName(serviceName).withNamespace(namespace).endMetadata()
+                        .withSubsets(doormanSubset())
+                        .build();
+                client.endpoints().inNamespace(namespace).resource(ep).create();
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to register Endpoints for {}/{}: {}", namespace, serviceName, e.getMessage());
+        }
+    }
+
+    private io.fabric8.kubernetes.api.model.EndpointSubset doormanSubset() {
+        return new EndpointSubsetBuilder()
+                .withAddresses(new EndpointAddressBuilder().withIp(doormanConfig.podIp()).build())
+                .withPorts(new EndpointPortBuilder()
+                        .withPort(doormanConfig.proxyPort()).withProtocol("TCP").build())
+                .build();
     }
 
     @Override
     public void deregister(String namespace, String serviceName) {
-        LOG.info("[stub] deregister endpoint {}/{}", namespace, serviceName);
+        deregisterEndpointSlice(namespace, serviceName);
+        deregisterClassicEndpoints(namespace, serviceName);
+    }
+
+    private void deregisterEndpointSlice(String namespace, String serviceName) {
+        try {
+            client.discovery().v1().endpointSlices()
+                    .inNamespace(namespace).withName("doorman-" + serviceName).delete();
+        } catch (Exception e) {
+            LOG.warn("Failed to deregister EndpointSlice for {}/{}: {}", namespace, serviceName, e.getMessage());
+        }
+    }
+
+    private void deregisterClassicEndpoints(String namespace, String serviceName) {
+        try {
+            var existing = client.endpoints().inNamespace(namespace).withName(serviceName).get();
+            if (existing == null || existing.getSubsets() == null) return;
+            boolean hadDoorman = existing.getSubsets().stream()
+                    .flatMap(s -> s.getAddresses() != null ? s.getAddresses().stream() : java.util.stream.Stream.empty())
+                    .anyMatch(a -> doormanConfig.podIp().equals(a.getIp()));
+            if (!hadDoorman) return;
+            client.endpoints().inNamespace(namespace).withName(serviceName).edit(ep -> {
+                if (ep.getSubsets() != null) {
+                    ep.getSubsets().removeIf(s -> s.getAddresses() != null
+                            && s.getAddresses().stream()
+                            .anyMatch(a -> doormanConfig.podIp().equals(a.getIp())));
+                }
+                return ep;
+            });
+        } catch (Exception e) {
+            LOG.warn("Failed to deregister Endpoints for {}/{}: {}", namespace, serviceName, e.getMessage());
+        }
     }
 
     // ── ServiceScaler ─────────────────────────────────────────────────────────

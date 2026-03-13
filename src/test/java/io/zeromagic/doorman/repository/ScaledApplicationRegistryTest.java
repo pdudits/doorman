@@ -261,6 +261,7 @@ class ScaledApplicationRegistryTest {
     void onDoormanEndpointRemoved_fightBack_whenScaledDown() {
         var reg = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(0, 0)));
         reg.onAdded(policy("ns", "pol", "svc", "dep", ScalingPolicyPhase.ScaledDown, 3));
+        registerCalls.clear(); // onAdded already called register() for initial ScaledDown state
         reg.onDoormanEndpointRemoved("ns", "svc");
         assertThat(registerCalls).hasSize(1);
         assertThat(registerCalls.get(0).service()).isEqualTo("svc");
@@ -271,6 +272,7 @@ class ScaledApplicationRegistryTest {
         var reg = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(0, 0)));
         reg.onAdded(policy("ns", "pol", "svc", "dep", ScalingPolicyPhase.ScaledDown, 3));
         reg.awaitReady("ns", "svc"); // → ScalingUp
+        registerCalls.clear();
         reg.onDoormanEndpointRemoved("ns", "svc");
         assertThat(registerCalls).hasSize(1);
     }
@@ -359,6 +361,7 @@ class ScaledApplicationRegistryTest {
     void onDoormanSliceRemoved_fightBack_whenScaledDown() {
         var reg = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(0, 0)));
         reg.onAdded(policy("ns", "pol", "svc", "dep", ScalingPolicyPhase.ScaledDown, 3));
+        registerCalls.clear(); // onAdded already called register() for initial ScaledDown state
         reg.onDoormanSliceRemoved("ns", "svc");
         assertThat(registerCalls).hasSize(1);
     }
@@ -415,5 +418,59 @@ class ScaledApplicationRegistryTest {
         registry.beginScalingDown("ns", "svc"); // second call → no-op
         assertThat(patches).as("no patch when already ScalingDown").isEmpty();
         assertThat(scaleDownCalls).as("scaleDown not called twice").isEmpty();
+    }
+
+    // -------------------------------------------------------------------------
+    // register() wiring — called after confirmScaledDown transitions
+    // -------------------------------------------------------------------------
+
+    @Test
+    void onDeploymentChanged_callsRegisterAfterConfirmScaledDown() {
+        registry.onAdded(policy("ns", "pol", "svc", "dep"));
+        registry.byServiceName("ns", "svc").orElseThrow().beginScalingDown();
+        registerCalls.clear();
+
+        registry.onDeploymentChanged(deployment("ns", "dep", 0, 0));
+
+        assertThat(registerCalls).hasSize(1);
+        assertThat(registerCalls.get(0)).isEqualTo(new RegisterCall("ns", "svc"));
+    }
+
+    @Test
+    void onRealEndpointsDrained_callsRegisterAfterConfirmScaledDown() {
+        registry.onAdded(policy("ns", "pol", "svc", "dep"));
+        registry.byServiceName("ns", "svc").orElseThrow().beginScalingDown();
+        registerCalls.clear();
+
+        registry.onRealEndpointsDrained("ns", "svc");
+
+        assertThat(registerCalls).hasSize(1);
+        assertThat(registerCalls.get(0)).isEqualTo(new RegisterCall("ns", "svc"));
+    }
+
+    @Test
+    void onRealSlicesDrained_callsRegisterAfterConfirmScaledDown() {
+        registry.onAdded(policy("ns", "pol", "svc", "dep"));
+        registry.byServiceName("ns", "svc").orElseThrow().beginScalingDown();
+        registerCalls.clear();
+
+        registry.onRealSlicesDrained("ns", "svc");
+
+        assertThat(registerCalls).hasSize(1);
+        assertThat(registerCalls.get(0)).isEqualTo(new RegisterCall("ns", "svc"));
+    }
+
+    @Test
+    void onAdded_callsRegisterWhenInitialStateIsScaledDown() {
+        var reg = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(0, 0)));
+        reg.onAdded(policy("ns", "pol", "svc", "dep", ScalingPolicyPhase.ScaledDown, 3));
+        assertThat(registerCalls).hasSize(1);
+        assertThat(registerCalls.get(0)).isEqualTo(new RegisterCall("ns", "svc"));
+    }
+
+    @Test
+    void onAdded_doesNotCallRegisterWhenInitialStateIsRunning() {
+        registry.onAdded(policy("ns", "pol", "svc", "dep"));
+        assertThat(registerCalls).isEmpty();
     }
 }

@@ -111,6 +111,9 @@ public class ScaledApplicationRegistry
         serviceIndex.put(serviceKey(meta.getNamespace(), spec.getServiceName()), policyKey);
 
         patchStatus(app);
+        if (initialState instanceof ServiceState.ScaledDown) {
+            registrar.register(meta.getNamespace(), spec.getServiceName());
+        }
         LOG.info("Registered {}/{} → {} (target={})",
                 meta.getNamespace(), meta.getName(),
                 initialState.getClass().getSimpleName(), targetReplicas);
@@ -172,6 +175,8 @@ public class ScaledApplicationRegistry
         if (ready == 0) {
             if (app.confirmScaledDown()) {
                 patchStatus(app);
+                var snap = app.snapshot();
+                registrar.register(snap.namespace(), snap.serviceName());
             }
         } else if (ready >= 1) {
             if (app.confirmRunning()) {
@@ -189,6 +194,7 @@ public class ScaledApplicationRegistry
         withApp(serviceKey(namespace, serviceName), app -> {
             if (app.confirmScaledDown()) {
                 patchStatus(app);
+                registrar.register(namespace, serviceName);
             }
         });
     }
@@ -218,6 +224,7 @@ public class ScaledApplicationRegistry
         withApp(serviceKey(namespace, serviceName), app -> {
             if (app.confirmScaledDown()) {
                 patchStatus(app);
+                registrar.register(namespace, serviceName);
             }
         });
     }

@@ -97,4 +97,12 @@ public class K3sClusterExtension implements BeforeAllCallback, AfterAllCallback 
     public KubernetesFacade facade() {
         return KubernetesClientFacadeAccessor.createFromKubeConfigYaml(container.getKubeConfigYaml());
     }
+
+    /**
+     * A {@link KubernetesFacade} configured for the k3s cluster with a specific {@link DoormanConfig}.
+     * Use this when endpoint registration behaviour is under test.
+     */
+    public KubernetesFacade facade(io.zeromagic.doorman.cli.DoormanConfig doormanConfig) {
+        return KubernetesClientFacadeAccessor.createFromKubeConfigYaml(container.getKubeConfigYaml(), doormanConfig);
+    }
 }
