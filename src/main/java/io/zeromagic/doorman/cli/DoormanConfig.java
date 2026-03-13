@@ -19,6 +19,7 @@ package io.zeromagic.doorman.cli;
 /**
  * Runtime identity of this Doorman instance.
  * podIp is used when registering Doorman as a service endpoint.
+ * proxyPort is the port Doorman's HTTP proxy listens on (registered in endpoints).
  */
-public record DoormanConfig(String podIp) {
+public record DoormanConfig(String podIp, int proxyPort) {
 }

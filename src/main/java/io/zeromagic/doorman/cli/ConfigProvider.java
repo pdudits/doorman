@@ -36,7 +36,7 @@ class ConfigProvider {
             throw new IllegalStateException(
                     "Doorman pod IP is not configured. Set --pod-ip or expose POD_IP via the Downward API.");
         }
-        return new DoormanConfig(ip);
+        return new DoormanConfig(ip, args.proxyPort);
     }
 
     @Bean

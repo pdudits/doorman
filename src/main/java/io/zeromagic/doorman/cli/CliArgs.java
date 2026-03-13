@@ -55,4 +55,10 @@ public class CliArgs {
             description = "How often to poll Traefik metrics (default: 15s).",
             defaultValue = "15s")
     String metricsPollInterval;
+
+    @CommandLine.Option(names = "--proxy-port",
+            description = "Port that Doorman's HTTP proxy server listens on (default: 8080). " +
+                    "This port is registered in EndpointSlice/Endpoints when intercepting scaled-down services.",
+            defaultValue = "8080")
+    int proxyPort;
 }

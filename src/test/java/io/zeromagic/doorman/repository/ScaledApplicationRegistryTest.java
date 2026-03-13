@@ -41,10 +41,12 @@ class ScaledApplicationRegistryTest {
 
     record PatchCall(String namespace, String name, ScalingPolicyPhase phase) {}
     record ScaleUpCall(String namespace, String deployment, int replicas) {}
+    record ScaleDownCall(String namespace, String deployment) {}
     record RegisterCall(String namespace, String service) {}
 
     List<PatchCall> patches;
     List<ScaleUpCall> scaleUpCalls;
+    List<ScaleDownCall> scaleDownCalls;
     List<RegisterCall> registerCalls;
     List<RegisterCall> deregisterCalls;
 
@@ -54,6 +56,7 @@ class ScaledApplicationRegistryTest {
     void setUp() {
         patches = new ArrayList<>();
         scaleUpCalls = new ArrayList<>();
+        scaleDownCalls = new ArrayList<>();
         registerCalls = new ArrayList<>();
         deregisterCalls = new ArrayList<>();
         registry = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(3, 3)));
@@ -64,7 +67,7 @@ class ScaledApplicationRegistryTest {
                 (ns, name, phase, target, msg) -> patches.add(new PatchCall(ns, name, phase)),
                 new ServiceScaler() {
                     @Override public void scaleUp(String ns, String dep, int reps) { scaleUpCalls.add(new ScaleUpCall(ns, dep, reps)); }
-                    @Override public void scaleDown(String ns, String dep) {}
+                    @Override public void scaleDown(String ns, String dep) { scaleDownCalls.add(new ScaleDownCall(ns, dep)); }
                 },
                 new EndpointRegistrar() {
                     @Override public void register(String ns, String svc) { registerCalls.add(new RegisterCall(ns, svc)); }
@@ -385,19 +388,32 @@ class ScaledApplicationRegistryTest {
     }
 
     @Test
+    void beginScalingDown_callsScaleDown() {
+        registry.onAdded(policy("ns", "pol", "svc", "dep"));
+
+        registry.beginScalingDown("ns", "svc");
+
+        assertThat(scaleDownCalls).hasSize(1);
+        assertThat(scaleDownCalls.get(0)).isEqualTo(new ScaleDownCall("ns", "dep"));
+    }
+
+    @Test
     void beginScalingDown_unknownService_noEffect() {
         // must not throw; nothing added to registry
         registry.beginScalingDown("ns", "not-managed");
         assertThat(patches).isEmpty();
+        assertThat(scaleDownCalls).isEmpty();
     }
 
     @Test
     void beginScalingDown_alreadyScalingDown_noDoubleTransition() {
         registry.onAdded(policy("ns", "pol", "svc", "dep"));
-        registry.beginScalingDown("ns", "svc"); // first call → ScalingDown + patch
+        registry.beginScalingDown("ns", "svc"); // first call → ScalingDown + patch + scaleDown
         patches.clear();
+        scaleDownCalls.clear();
 
         registry.beginScalingDown("ns", "svc"); // second call → no-op
         assertThat(patches).as("no patch when already ScalingDown").isEmpty();
+        assertThat(scaleDownCalls).as("scaleDown not called twice").isEmpty();
     }
 }

@@ -1,10 +1,10 @@
 ---
 id: TASK-005
 title: Traefik Prometheus metrics scraper and idle detection
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-03-12 11:26'
-updated_date: '2026-03-13 11:28'
+updated_date: '2026-03-13 18:47'
 labels:
   - traffic
   - traefik
@@ -26,15 +26,15 @@ The idle timeout window (from ScalingPolicy spec) is tracked per-service. When a
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Polls Traefik metrics on a configurable interval (default 15s) via --metrics-poll-interval CLI arg
-- [ ] #2 Parses traefik_service_requests_total counter; detects per-service traffic delta between polls
-- [ ] #3 Traefik service name derived as namespace-serviceName-port@kubernetes; port read from Kubernetes Ingress named in ScalingPolicy.spec.ingressName
-- [ ] #4 ScalingPolicy.spec gains ingressName (required for port resolution) and optional idleTimeout fields; CRD YAML updated
-- [ ] #5 Idle detection triggers registry.beginScalingDown() when zero new requests for the configured idleTimeout; idleTimeout defaults to global --idle-timeout CLI arg (default 5m)
+- [x] #1 Polls Traefik metrics on a configurable interval (default 15s) via --metrics-poll-interval CLI arg
+- [x] #2 Parses traefik_service_requests_total counter; detects per-service traffic delta between polls
+- [x] #3 Traefik service name derived as namespace-serviceName-port@kubernetes; port read from Kubernetes Ingress named in ScalingPolicy.spec.ingressName
+- [x] #4 ScalingPolicy.spec gains ingressName (required for port resolution) and optional idleTimeout fields; CRD YAML updated
+- [x] #5 Idle detection triggers registry.beginScalingDown() when zero new requests for the configured idleTimeout; idleTimeout defaults to global --idle-timeout CLI arg (default 5m)
 - [ ] #6 TraefikMetricsSource interface with two impls: UrlTraefikMetricsSource (--traefik-metrics-url) and KubernetesPodTraefikMetricsSource (--traefik-namespace + --traefik-label-selector + --traefik-metrics-port default 9100)
-- [ ] #7 Counter reset (Traefik restart) detected by counter < previous; treated as traffic seen to avoid false-positive scale-down
-- [ ] #8 Only Running services are polled; other states are skipped in each poll cycle
-- [ ] #9 HTTP/parse errors are logged as warnings and the cycle is skipped (no crash)
+- [x] #7 Counter reset (Traefik restart) detected by counter < previous; treated as traffic seen to avoid false-positive scale-down
+- [x] #8 Only Running services are polled; other states are skipped in each poll cycle
+- [x] #9 HTTP/parse errors are logged as warnings and the cycle is skipped (no crash)
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -84,9 +84,10 @@ Counter reset guard: if current < last, treat as traffic seen, update lastCounte
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 All aceptance criteria covered
+- [x] #1 All aceptance criteria covered
 - [ ] #2 or rejected with explanation
-- [ ] #3 Code is compiling and unit test verifies its relevant functionality
-- [ ] #4 An integration test is written
+- [x] #3 Code is compiling and unit test verifies its relevant functionality
+- [x] #4 An integration test is written
 - [ ] #5 or a task describing the test scenario is in the backlog
+- [ ] #6 AC#6 KubernetesPodTraefikMetricsSource deferred to TASK-005.08 or later — URL-based source is implemented and sufficient for milestone m-0
 <!-- DOD:END -->

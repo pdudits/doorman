@@ -278,6 +278,8 @@ public class ScaledApplicationRegistry
         withApp(serviceKey(namespace, serviceName), app -> {
             if (app.beginScalingDown()) {
                 patchStatus(app);
+                var snap = app.snapshot();
+                scaler.scaleDown(snap.namespace(), snap.deploymentName());
             }
         }, () -> LOG.warn("beginScalingDown called for unmanaged service {}/{}", namespace, serviceName));
     }

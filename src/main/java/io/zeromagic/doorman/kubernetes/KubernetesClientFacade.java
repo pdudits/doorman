@@ -129,7 +129,7 @@ class KubernetesClientFacade implements KubernetesFacade {
         LOG.info("[stub] deregister endpoint {}/{}", namespace, serviceName);
     }
 
-    // ── ServiceScaler (stub — Task-008) ───────────────────────────────────────
+    // ── ServiceScaler ─────────────────────────────────────────────────────────
 
     @Override
     public void scaleUp(String namespace, String deploymentName, int targetReplicas) {
@@ -138,7 +138,17 @@ class KubernetesClientFacade implements KubernetesFacade {
 
     @Override
     public void scaleDown(String namespace, String deploymentName) {
-        LOG.info("[stub] scaleDown {}/{}", namespace, deploymentName);
+        LOG.info("Scaling down deployment {}/{} to 0", namespace, deploymentName);
+        try {
+            client.apps().deployments()
+                    .inNamespace(namespace).withName(deploymentName)
+                    .edit(d -> {
+                        d.getSpec().setReplicas(0);
+                        return d;
+                    });
+        } catch (Exception e) {
+            LOG.warn("Failed to scale down deployment {}/{}: {}", namespace, deploymentName, e.getMessage());
+        }
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
