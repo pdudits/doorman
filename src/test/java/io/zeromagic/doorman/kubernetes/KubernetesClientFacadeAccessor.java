@@ -28,7 +28,7 @@ import java.util.Optional;
  */
 public class KubernetesClientFacadeAccessor {
 
-    private static final DoormanConfig DUMMY_CONFIG = new DoormanConfig("0.0.0.0", 8080, Duration.ofSeconds(60));
+    private static final DoormanConfig DUMMY_CONFIG = new DoormanConfig("0.0.0.0", 8080, Duration.ofSeconds(60), Duration.ofMillis(50));
 
     private KubernetesClientFacadeAccessor() {}
 

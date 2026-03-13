@@ -21,6 +21,7 @@ package io.zeromagic.doorman.cli;
  * podIp is used when registering Doorman as a service endpoint.
  * proxyPort is the port Doorman's HTTP proxy listens on (registered in endpoints).
  * scaleUpTimeout is the maximum time to wait for a service to become ready before returning 503.
+ * propagationDelay is the time to wait after scale-up before redirecting, allowing the ingress controller to propagate endpoint changes.
  */
-public record DoormanConfig(String podIp, int proxyPort, java.time.Duration scaleUpTimeout) {
+public record DoormanConfig(String podIp, int proxyPort, java.time.Duration scaleUpTimeout, java.time.Duration propagationDelay) {
 }

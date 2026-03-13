@@ -50,6 +50,16 @@ class DurationParserTest {
         assertThat(DurationParser.parse("PT1H30M")).isEqualTo(Duration.ofHours(1).plusMinutes(30));
     }
 
+    @Test void milliseconds() {
+        assertThat(DurationParser.parse("50ms")).isEqualTo(Duration.ofMillis(50));
+        assertThat(DurationParser.parse("500ms")).isEqualTo(Duration.ofMillis(500));
+        assertThat(DurationParser.parse("1000ms")).isEqualTo(Duration.ofMillis(1000));
+    }
+
+    @Test void secondsAndMilliseconds() {
+        assertThat(DurationParser.parse("1s500ms")).isEqualTo(Duration.ofSeconds(1).plusMillis(500));
+    }
+
     @Test void blankThrows() {
         assertThatThrownBy(() -> DurationParser.parse(""))
                 .isInstanceOf(IllegalArgumentException.class);

@@ -4,7 +4,7 @@ title: 'ProxyServer: Sun HTTP Server, hold + redirect'
 status: Done
 assignee: []
 created_date: '2026-03-13 20:27'
-updated_date: '2026-03-13 22:53'
+updated_date: '2026-03-13 23:18'
 labels:
   - proxy
   - http
@@ -78,6 +78,24 @@ The main proxy implementation using Sun HTTP Server and virtual threads.
 - [ ] #9 Unit tests cover: 307-immediate, 307-after-wait, 503-timeout, 404-unknown, 502-failed-future
 - [ ] #10 IT test in k3s or a dedicated backlog task created for the scenario
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## Implementation Decisions
+
+**`@PostConstruct` can't throw checked exceptions (avaje)**: avaje's annotation processor generates a lambda to call `start()`; checked exceptions in lambdas require handling. `HttpServer.create()` throws `IOException` — wrapped in `IllegalStateException` as workaround. `@PreDestroy stop()` is clean (no checked exceptions).
+
+**Host header port stripping in handler**: `HttpClient` sends `Host: example.test:12345`. Route index stores bare hostnames. Handler strips port before calling `routeIndex.resolve()` but keeps the full `Host` value (with port) when constructing the `Location` redirect URL.
+
+**`Location` URL reconstruction**: Uses `exchange.getRequestURI()` (already has path + query string), prepends `scheme://host`. Scheme comes from `X-Forwarded-Proto` header; defaults to `"http"` if absent.
+
+**Test strategy — real state transitions, not mocks**: `ProxyServerTest` uses the actual `ScaledApplicationRegistry` with stub lambdas for Kubernetes calls. This tests the full hold-and-redirect chain without mocking internal behavior.
+
+**JDK `HttpClient` `Host` header restriction**: `java.net.http.HttpClient` refuses to set `Host` manually (it's in `DISALLOWED_HEADERS_SET`, computed at class load time from system property `jdk.httpclient.allowRestrictedHeaders`). Setting the property after class load has no effect. `HttpURLConnection` checks `sun.net.http.allowRestrictedHeaders` at runtime but is fragile in multi-test suites.
+
+**JEP-418 `InetAddressResolverProvider` (chosen solution)**: Register an SPI implementation in `META-INF/services/java.net.spi.InetAddressResolverProvider` that resolves `*.test` → `InetAddress.getLoopbackAddress()` and delegates everything else to the built-in resolver. Tests use real-looking URLs like `http://example.test:PORT/path`; the JDK sets the `Host` header automatically. No system property hacks, no header manipulation. The SPI also works for future end-to-end / k3s-mock tests that need real hostnames.
+<!-- SECTION:NOTES:END -->
 
 ## Final Summary
 

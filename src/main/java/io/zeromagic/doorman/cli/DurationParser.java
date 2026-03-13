@@ -20,16 +20,17 @@ import java.time.Duration;
 import java.util.regex.Pattern;
 
 /**
- * Parses human-friendly duration strings (e.g. "5m", "15s", "1h30m") into
+ * Parses human-friendly duration strings (e.g. "5m", "15s", "1h30m", "50ms") into
  * {@link Duration} instances.
  *
- * <p>Supported format: {@code (\d+h)?(\d+m)?(\d+s)?} — at least one component required.
+ * <p>Supported format: {@code (\d+h)?(\d+m)?(\d+s)?(\d+ms)?} — at least one component required.
+ * Note: "ms" must appear after "s" if both are present; prefer plain milliseconds ("50ms") for sub-second values.
  * ISO-8601 strings ({@code PT...}) are also accepted via {@link Duration#parse}.
  */
 public final class DurationParser {
 
     private static final Pattern PATTERN =
-            Pattern.compile("(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?");
+            Pattern.compile("(?:(\\d+)h)?(?:(\\d+)m(?!s))?(?:(\\d+)s)?(?:(\\d+)ms)?");
 
     private DurationParser() {}
 
@@ -51,10 +52,11 @@ public final class DurationParser {
         long hours   = matcher.group(1) != null ? Long.parseLong(matcher.group(1)) : 0;
         long minutes = matcher.group(2) != null ? Long.parseLong(matcher.group(2)) : 0;
         long seconds = matcher.group(3) != null ? Long.parseLong(matcher.group(3)) : 0;
+        long millis  = matcher.group(4) != null ? Long.parseLong(matcher.group(4)) : 0;
 
-        if (hours == 0 && minutes == 0 && seconds == 0) {
+        if (hours == 0 && minutes == 0 && seconds == 0 && millis == 0) {
             throw new IllegalArgumentException("Unrecognised duration format: '" + s + "'");
         }
-        return Duration.ofHours(hours).plusMinutes(minutes).plusSeconds(seconds);
+        return Duration.ofHours(hours).plusMinutes(minutes).plusSeconds(seconds).plusMillis(millis);
     }
 }

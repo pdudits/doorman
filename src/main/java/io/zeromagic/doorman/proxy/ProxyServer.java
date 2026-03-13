@@ -64,7 +64,7 @@ public class ProxyServer {
     /** Test constructor: uses port 0 to get a random available port. */
     ProxyServer(IngressRouteIndex routeIndex, ScaledApplicationRegistry registry, long scaleUpTimeoutMillis) {
         this(routeIndex, registry,
-                new DoormanConfig("0.0.0.0", 0, java.time.Duration.ofMillis(scaleUpTimeoutMillis)));
+                new DoormanConfig("0.0.0.0", 0, java.time.Duration.ofMillis(scaleUpTimeoutMillis), java.time.Duration.ZERO));
     }
 
     @PostConstruct
@@ -114,6 +114,9 @@ public class ProxyServer {
             var future = registry.awaitReady(target.namespace(), target.serviceName());
             try {
                 future.get(config.scaleUpTimeout().toMillis(), TimeUnit.MILLISECONDS);
+                // Wait for the ingress controller to propagate the endpoint change before redirecting.
+                // Virtual threads make this sleep cost-free.
+                Thread.sleep(config.propagationDelay().toMillis());
                 String location = buildLocation(exchange, hostHeader);
                 exchange.getResponseHeaders().set("Location", location);
                 respond(exchange, 307, "");

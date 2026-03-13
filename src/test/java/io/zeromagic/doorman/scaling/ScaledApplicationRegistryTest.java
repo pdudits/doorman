@@ -473,4 +473,63 @@ class ScaledApplicationRegistryTest {
         registry.onAdded(policy("ns", "pol", "svc", "dep"));
         assertThat(registerCalls).isEmpty();
     }
+
+    // -------------------------------------------------------------------------
+    // awaitReady() — ScalingUp status patch (TASK-008)
+    // -------------------------------------------------------------------------
+
+    @Test
+    void awaitReady_scaledDown_patchesStatusToScalingUp() {
+        var reg = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(0, 0)));
+        reg.onAdded(policy("ns", "pol", "svc", "dep", ScalingPolicyPhase.ScaledDown, 3));
+        patches.clear();
+
+        reg.awaitReady("ns", "svc");
+
+        assertThat(patches).hasSize(1);
+        assertThat(patches.get(0).phase()).isEqualTo(ScalingPolicyPhase.ScalingUp);
+    }
+
+    @Test
+    void awaitReady_scalingUp_doesNotPatchAgain() {
+        var reg = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(0, 0)));
+        reg.onAdded(policy("ns", "pol", "svc", "dep", ScalingPolicyPhase.ScaledDown, 3));
+        reg.awaitReady("ns", "svc");
+        patches.clear();
+
+        reg.awaitReady("ns", "svc"); // second call — already ScalingUp
+        assertThat(patches).as("no second ScalingUp patch on repeat call").isEmpty();
+    }
+
+    // -------------------------------------------------------------------------
+    // onDeploymentChanged — deregister before confirmRunning (TASK-008)
+    // -------------------------------------------------------------------------
+
+    @Test
+    void onDeploymentReady_callsDeregisterBeforeCompletingFuture() throws Exception {
+        var reg = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(0, 0)));
+        reg.onAdded(policy("ns", "pol", "svc", "dep", ScalingPolicyPhase.ScaledDown, 1));
+        var future = reg.awaitReady("ns", "svc");
+        assertThat(future).isNotDone();
+
+        reg.onDeploymentChanged(deployment("ns", "dep", 1, 1));
+
+        assertThat(future).isCompletedWithValue(null);
+        assertThat(deregisterCalls).hasSize(1);
+        assertThat(deregisterCalls.get(0)).isEqualTo(new RegisterCall("ns", "svc"));
+    }
+
+    @Test
+    void onDeploymentReady_deregisterCalledEvenIfAlreadyRunning() {
+        // Second deployment-ready event — confirmRunning returns false (already Running),
+        // but deregister is still called (idempotent cleanup)
+        var reg = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(0, 0)));
+        reg.onAdded(policy("ns", "pol", "svc", "dep", ScalingPolicyPhase.ScaledDown, 1));
+        reg.awaitReady("ns", "svc");
+        reg.onDeploymentChanged(deployment("ns", "dep", 1, 1)); // first ready event → Running
+        deregisterCalls.clear();
+
+        reg.onDeploymentChanged(deployment("ns", "dep", 1, 1)); // second ready event
+        assertThat(deregisterCalls).hasSize(1); // deregister still called
+    }
 }

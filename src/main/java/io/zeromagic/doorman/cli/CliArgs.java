@@ -66,4 +66,9 @@ public class CliArgs {
             description = "Maximum time to wait for a service to become ready before returning 503 (default: 60s).",
             defaultValue = "60s")
     String scaleUpTimeout = "60s";
+
+    @CommandLine.Option(names = "--propagation-delay",
+            description = "How long to wait after scale-up before redirecting clients, to allow the ingress controller to propagate endpoint changes (default: 50ms).",
+            defaultValue = "50ms")
+    String propagationDelay = "50ms";
 }

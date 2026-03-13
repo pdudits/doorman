@@ -4,7 +4,7 @@ title: 'IngressRouteIndex: resolve Host+path prefix to (namespace, serviceName)'
 status: Done
 assignee: []
 created_date: '2026-03-13 20:26'
-updated_date: '2026-03-13 20:49'
+updated_date: '2026-03-13 23:17'
 labels:
   - proxy
   - kubernetes
@@ -56,6 +56,20 @@ New `@Singleton` class implementing `ScalingPolicyEvents` that builds a routing 
 - [x] #4 resolve returns empty for unknown host or path
 - [x] #5 Unit tests cover: basic resolution, longest-prefix wins, deleted policy entries are removed, missing Ingress logs a warning and adds no entries
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## Implementation Decisions
+
+**Two-level index structure**: `ConcurrentHashMap<host, HostRoutes>` as primary lookup; a separate `ConcurrentHashMap<policyKey, List<RouteKey>>` tracks which entries each policy owns — needed for clean `onDeleted` removal without a full scan.
+
+**`HostRoutes` internal class**: Encapsulates a `ReentrantReadWriteLock`-guarded `List<RouteEntry>` kept sorted descending by `pathPrefix.length()`. `resolve(path)` iterates and returns the first `startsWith` match — first match equals longest prefix.
+
+**Port stripping in `IngressRouteIndex.resolve()`**: Ingress rules store bare hostnames; HTTP requests send `Host: example.com:8080`. Port is stripped from the host argument before map lookup. The same stripping is also needed in `ProxyServer` before calling `routeIndex.resolve()`.
+
+**Default backends skipped**: `spec.defaultBackend` (no host) is not indexed — would require host=`*` semantics and add complexity not needed for the current use case.
+<!-- SECTION:NOTES:END -->
 
 ## Final Summary
 

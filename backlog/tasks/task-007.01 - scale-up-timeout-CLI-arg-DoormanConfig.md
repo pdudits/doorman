@@ -4,7 +4,7 @@ title: scale-up-timeout CLI arg + DoormanConfig
 status: Done
 assignee: []
 created_date: '2026-03-13 20:26'
-updated_date: '2026-03-13 20:30'
+updated_date: '2026-03-13 23:17'
 labels:
   - proxy
   - cli
@@ -37,6 +37,14 @@ Simple prerequisite for the proxy server.
 - [x] #3 ConfigProvider parses the arg via DurationParser and passes it to DoormanConfig
 - [x] #4 Code compiles; all existing tests pass
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## Implementation Decisions
+
+**picocli `defaultValue` vs field initializer**: `@Option(defaultValue = "60s")` only applies when picocli parses arguments. Direct `new CliArgs()` construction in tests gets `null`. Fix: add a Java field initializer alongside the annotation (`String scaleUpTimeout = "60s"`). This became a recurring pattern applied to all subsequently added CLI args (`--propagation-delay`).
+<!-- SECTION:NOTES:END -->
 
 ## Final Summary
 

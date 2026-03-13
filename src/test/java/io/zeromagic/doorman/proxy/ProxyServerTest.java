@@ -97,7 +97,15 @@ class ProxyServerTest {
 
     /** Starts the proxy server with the given timeout and returns its bound port. */
     private int startServer(long timeoutMillis) {
-        server = new ProxyServer(routeIndex, registry, timeoutMillis);
+        return startServer(timeoutMillis, 0);
+    }
+
+    private int startServer(long timeoutMillis, long propagationDelayMillis) {
+        server = new ProxyServer(routeIndex, registry,
+                new io.zeromagic.doorman.cli.DoormanConfig(
+                        "0.0.0.0", 0,
+                        java.time.Duration.ofMillis(timeoutMillis),
+                        java.time.Duration.ofMillis(propagationDelayMillis)));
         server.start();
         return server.boundPort();
     }
@@ -234,5 +242,21 @@ class ProxyServerTest {
         var resp = get(port, HOST, "/");
 
         assertThat(resp.statusCode()).isEqualTo(502);
+    }
+
+    @Test
+    void propagationDelay_is_observed_before_307() throws Exception {
+        // Running service with a 200ms propagation delay — response must take at least that long
+        registry = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(1, 1)));
+        addRoute();
+        registry.onAdded(scaledDownPolicy());
+
+        int port = startServer(5_000, 200);
+        long start = System.currentTimeMillis();
+        var resp = get(port, HOST, "/");
+        long elapsed = System.currentTimeMillis() - start;
+
+        assertThat(resp.statusCode()).isEqualTo(307);
+        assertThat(elapsed).as("propagation delay must be observed").isGreaterThanOrEqualTo(190);
     }
 }

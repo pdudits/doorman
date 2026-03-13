@@ -183,6 +183,8 @@ public class ScaledApplicationRegistry
                 registrar.register(snap.namespace(), snap.serviceName());
             }
         } else if (ready >= 1) {
+            var snap = app.snapshot();
+            registrar.deregister(snap.namespace(), snap.serviceName());
             if (app.confirmRunning()) {
                 patchStatus(app);
             }
@@ -271,6 +273,7 @@ public class ScaledApplicationRegistry
         var result = app.awaitReady();
         if (result.scaleUpNeeded()) {
             var snap = app.snapshot();
+            patchStatus(app);
             scaler.scaleUp(snap.namespace(), snap.deploymentName(), snap.targetReplicas());
         }
         return result.future();

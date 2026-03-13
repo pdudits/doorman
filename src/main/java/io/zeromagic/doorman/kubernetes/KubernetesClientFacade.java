@@ -280,7 +280,17 @@ class KubernetesClientFacade implements KubernetesFacade {
 
     @Override
     public void scaleUp(String namespace, String deploymentName, int targetReplicas) {
-        LOG.info("[stub] scaleUp {}/{} to {}", namespace, deploymentName, targetReplicas);
+        LOG.info("Scaling up deployment {}/{} to {}", namespace, deploymentName, targetReplicas);
+        try {
+            client.apps().deployments()
+                    .inNamespace(namespace).withName(deploymentName)
+                    .edit(d -> {
+                        d.getSpec().setReplicas(targetReplicas);
+                        return d;
+                    });
+        } catch (Exception e) {
+            LOG.warn("Failed to scale up deployment {}/{}: {}", namespace, deploymentName, e.getMessage());
+        }
     }
 
     @Override
