@@ -1,6 +1,6 @@
 ---
 name: testing
-description: Guides for testing patterns in the project, junit, mockito, manual test
+description: Guides for testing patterns in the project, junit, mockito, manual test, planning implementation of tests
 ---
 
 # Testing Guide
