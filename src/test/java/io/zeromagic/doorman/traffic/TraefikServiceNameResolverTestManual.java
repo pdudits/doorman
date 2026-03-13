@@ -19,8 +19,8 @@ package io.zeromagic.doorman.traffic;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
 import io.zeromagic.doorman.ManualInClusterExtension;
 import io.zeromagic.doorman.kubernetes.KubernetesClientFacadeAccessor;
-import io.zeromagic.doorman.repository.crd.ScalingPolicy;
-import io.zeromagic.doorman.repository.crd.ScalingPolicySpec;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicySpec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 

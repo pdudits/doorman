@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package io.zeromagic.doorman.repository;
+package io.zeromagic.doorman.scaling;
 
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.zeromagic.doorman.k3s.K3sClusterExtension;
 import io.zeromagic.doorman.kubernetes.DeploymentStateReader;
 import io.zeromagic.doorman.kubernetes.EndpointRegistrar;
 import io.zeromagic.doorman.kubernetes.ServiceScaler;
-import io.zeromagic.doorman.repository.crd.ScalingPolicy;
-import io.zeromagic.doorman.repository.crd.ScalingPolicyPhase;
-import io.zeromagic.doorman.repository.crd.ScalingPolicySpec;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyPhase;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicySpec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 

@@ -18,7 +18,7 @@ package io.zeromagic.doorman.proxy;
 
 import io.zeromagic.doorman.kubernetes.KubernetesFacade;
 import io.zeromagic.doorman.kubernetes.events.ScalingPolicyEvents;
-import io.zeromagic.doorman.repository.crd.ScalingPolicy;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;

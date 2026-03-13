@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.zeromagic.doorman.repository;
+package io.zeromagic.doorman.scaling;
 
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.zeromagic.doorman.cli.DurationParser;
@@ -27,8 +27,8 @@ import io.zeromagic.doorman.kubernetes.events.DeploymentEvents;
 import io.zeromagic.doorman.kubernetes.events.EndpointSliceEvents;
 import io.zeromagic.doorman.kubernetes.events.EndpointsEvents;
 import io.zeromagic.doorman.kubernetes.events.ScalingPolicyEvents;
-import io.zeromagic.doorman.repository.crd.ScalingPolicy;
-import io.zeromagic.doorman.repository.crd.ScalingPolicyPhase;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyPhase;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.zeromagic.doorman.repository;
+package io.zeromagic.doorman.scaling;
 
 import io.zeromagic.doorman.kubernetes.ServiceScaler;
 import org.slf4j.Logger;

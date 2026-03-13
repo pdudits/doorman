@@ -19,7 +19,7 @@ package io.zeromagic.doorman.kubernetes;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
-import io.zeromagic.doorman.repository.crd.ScalingPolicyPhase;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyPhase;
 
 import java.util.HashMap;
 import java.util.Map;

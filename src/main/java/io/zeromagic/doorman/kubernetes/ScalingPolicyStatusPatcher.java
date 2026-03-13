@@ -16,7 +16,7 @@
 
 package io.zeromagic.doorman.kubernetes;
 
-import io.zeromagic.doorman.repository.crd.ScalingPolicyPhase;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyPhase;
 
 public interface ScalingPolicyStatusPatcher {
     void patch(String namespace, String name, ScalingPolicyPhase phase,

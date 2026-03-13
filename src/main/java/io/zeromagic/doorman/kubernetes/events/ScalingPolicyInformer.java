@@ -20,7 +20,7 @@ import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 import io.avaje.inject.PostConstruct;
 import io.avaje.inject.PreDestroy;
 import io.zeromagic.doorman.kubernetes.KubernetesFacade;
-import io.zeromagic.doorman.repository.crd.ScalingPolicy;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -20,8 +20,9 @@ import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressRule;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressServiceBackend;
 import io.zeromagic.doorman.kubernetes.KubernetesFacade;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicySpec;
 import io.zeromagic.doorman.kubernetes.events.ScalingPolicyEvents;
-import io.zeromagic.doorman.repository.crd.ScalingPolicy;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -36,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Traefik names each backend as {@code {namespace}-{serviceName}-{port}@kubernetes}.
  * The port is obtained from the Kubernetes Ingress whose name is recorded in
- * {@link io.zeromagic.doorman.repository.crd.ScalingPolicySpec#getIngressName()}.
+ * {@link ScalingPolicySpec#getIngressName()}.
  *
  * <p>Implements {@link ScalingPolicyEvents} to maintain a local index of
  * {@code (namespace, serviceName) → ingressName} and to invalidate the resolved-label

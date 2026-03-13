@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.zeromagic.doorman.repository;
+package io.zeromagic.doorman.scaling;
 
 import org.junit.jupiter.api.Test;
 

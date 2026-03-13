@@ -16,7 +16,7 @@
 
 package io.zeromagic.doorman.kubernetes.events;
 
-import io.zeromagic.doorman.repository.crd.ScalingPolicy;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
 
 public interface ScalingPolicyEvents {
     void onAdded(ScalingPolicy policy);

@@ -23,11 +23,11 @@ import io.zeromagic.doorman.k3s.K3sClusterExtension;
 import io.zeromagic.doorman.kubernetes.DeploymentStateReader;
 import io.zeromagic.doorman.kubernetes.EndpointRegistrar;
 import io.zeromagic.doorman.kubernetes.ServiceScaler;
-import io.zeromagic.doorman.repository.ScaledApplicationRegistry;
-import io.zeromagic.doorman.repository.ServiceState;
-import io.zeromagic.doorman.repository.crd.ScalingPolicy;
-import io.zeromagic.doorman.repository.crd.ScalingPolicyPhase;
-import io.zeromagic.doorman.repository.crd.ScalingPolicySpec;
+import io.zeromagic.doorman.scaling.ScaledApplicationRegistry;
+import io.zeromagic.doorman.scaling.ServiceState;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyPhase;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicySpec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 

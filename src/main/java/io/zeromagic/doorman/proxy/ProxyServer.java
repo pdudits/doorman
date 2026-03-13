@@ -21,7 +21,7 @@ import com.sun.net.httpserver.HttpServer;
 import io.avaje.inject.PostConstruct;
 import io.avaje.inject.PreDestroy;
 import io.zeromagic.doorman.cli.DoormanConfig;
-import io.zeromagic.doorman.repository.ScaledApplicationRegistry;
+import io.zeromagic.doorman.scaling.ScaledApplicationRegistry;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;

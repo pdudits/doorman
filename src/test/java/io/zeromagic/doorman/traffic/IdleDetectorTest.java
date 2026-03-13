@@ -23,16 +23,14 @@ import io.zeromagic.doorman.kubernetes.DeploymentStateReader;
 import io.zeromagic.doorman.kubernetes.EndpointRegistrar;
 import io.zeromagic.doorman.kubernetes.ServiceScaler;
 import io.zeromagic.doorman.kubernetes.TestKubernetesFacade;
-import io.zeromagic.doorman.repository.ScaledApplication;
-import io.zeromagic.doorman.repository.ScaledApplicationRegistry;
-import io.zeromagic.doorman.repository.ServiceState;
-import io.zeromagic.doorman.repository.crd.ScalingPolicy;
-import io.zeromagic.doorman.repository.crd.ScalingPolicySpec;
+import io.zeromagic.doorman.scaling.ScaledApplicationRegistry;
+import io.zeromagic.doorman.scaling.ServiceState;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicySpec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.*;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 

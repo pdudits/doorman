@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.zeromagic.doorman.repository.crd;
+package io.zeromagic.doorman.kubernetes.crd;
 
 public enum ScalingPolicyPhase {
     Running,
