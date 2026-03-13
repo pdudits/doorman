@@ -1,9 +1,10 @@
 ---
 id: TASK-005
 title: Traefik Prometheus metrics scraper and idle detection
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-03-12 11:26'
+updated_date: '2026-03-13 11:28'
 labels:
   - traffic
   - traefik
@@ -25,14 +26,61 @@ The idle timeout window (from ScalingPolicy spec) is tracked per-service. When a
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Polls the Traefik Prometheus /metrics endpoint on a configurable interval (default: 15s)
-- [ ] #2 Parses the `traefik_service_requests_total` (or `traefik_service_request_duration_seconds_count`) counter to detect per-service request rate
-- [ ] #3 Identifies the correct Traefik service by matching `service` label against `ScalingPolicy.spec.traefikServiceName`
-- [ ] #4 Uses a sliding window or delta between two polls to determine if a service is idle (no new requests since last poll)
-- [ ] #5 Idle detection triggers the scale-down flow when a service has received zero new requests for the configured `idleTimeout`
-- [ ] #6 The Traefik metrics URL is configurable via CLI arg `--traefik-metrics-url` (default: `http://traefik.kube-system.svc:9100/metrics`)
-- [ ] #7 Uses `java.net.http.HttpClient` for the HTTP request
+- [ ] #1 Polls Traefik metrics on a configurable interval (default 15s) via --metrics-poll-interval CLI arg
+- [ ] #2 Parses traefik_service_requests_total counter; detects per-service traffic delta between polls
+- [ ] #3 Traefik service name derived as namespace-serviceName-port@kubernetes; port read from Kubernetes Ingress named in ScalingPolicy.spec.ingressName
+- [ ] #4 ScalingPolicy.spec gains ingressName (required for port resolution) and optional idleTimeout fields; CRD YAML updated
+- [ ] #5 Idle detection triggers registry.beginScalingDown() when zero new requests for the configured idleTimeout; idleTimeout defaults to global --idle-timeout CLI arg (default 5m)
+- [ ] #6 TraefikMetricsSource interface with two impls: UrlTraefikMetricsSource (--traefik-metrics-url) and KubernetesPodTraefikMetricsSource (--traefik-namespace + --traefik-label-selector + --traefik-metrics-port default 9100)
+- [ ] #7 Counter reset (Traefik restart) detected by counter < previous; treated as traffic seen to avoid false-positive scale-down
+- [ ] #8 Only Running services are polled; other states are skipped in each poll cycle
+- [ ] #9 HTTP/parse errors are logged as warnings and the cycle is skipped (no crash)
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+# Task-005 Implementation Plan
+
+## Design
+
+### Traefik source selection (CLI)
+- `--traefik-metrics-url` → `UrlTraefikMetricsSource`
+- `--traefik-namespace` + `--traefik-label-selector` → `KubernetesPodTraefikMetricsSource`
+
+### Traefik service name
+Fixed pattern: `{namespace}-{serviceName}-{port}@kubernetes`
+Port resolved from the Kubernetes Ingress named `ScalingPolicy.spec.ingressName`.
+`TraefikServiceNameResolver` caches results; refreshes on `onUpdated`.
+
+### Idle detection
+`IdleDetector` runs a scheduled polling loop.
+Per service (in Running state only):
+1. Fetch + parse metrics
+2. Delta = current counter - lastCounter
+3. If delta > 0 → reset idleSince
+4. Else if idleSince == null → idleSince = now
+5. Else if now - idleSince >= idleTimeout → call registry.beginScalingDown(ns, svc)
+
+Counter reset guard: if current < last, treat as traffic seen, update lastCounter.
+
+## Files
+- `ScalingPolicySpec.java` — add ingressName, idleTimeout
+- `scalingpolicy-crd.yaml` — add fields
+- `CliArgs.java` / `DoormanConfig.java` — add 6 new args
+- `traffic/TraefikMetricsSource.java` — interface
+- `traffic/UrlTraefikMetricsSource.java`
+- `traffic/KubernetesPodTraefikMetricsSource.java`
+- `traffic/PrometheusMetricsParser.java`
+- `traffic/TraefikServiceNameResolver.java`
+- `traffic/IdleDetector.java`
+- `ScaledApplicationRegistry.java` — add beginScalingDown(ns, svc)
+
+## Tests
+- `PrometheusMetricsParserTest`
+- `TraefikServiceNameResolverTest`
+- `IdleDetectorTest`
+<!-- SECTION:PLAN:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
