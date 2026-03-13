@@ -22,6 +22,8 @@ import io.fabric8.kubernetes.api.model.networking.v1.IngressServiceBackend;
 import io.zeromagic.doorman.kubernetes.KubernetesFacade;
 import io.zeromagic.doorman.repository.ScalingPolicyEvents;
 import io.zeromagic.doorman.repository.crd.ScalingPolicy;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@code (namespace, serviceName) → ingressName} and to invalidate the resolved-label
  * cache whenever a policy changes.
  */
+@Singleton
 class TraefikServiceNameResolver implements ScalingPolicyEvents {
 
     private static final Logger LOG = LoggerFactory.getLogger(TraefikServiceNameResolver.class);
@@ -52,6 +55,7 @@ class TraefikServiceNameResolver implements ScalingPolicyEvents {
     /** Cache: "{namespace}/{serviceName}" → resolved Traefik label (or empty on lookup failure). */
     private final ConcurrentHashMap<String, Optional<String>> cache = new ConcurrentHashMap<>();
 
+    @Inject
     TraefikServiceNameResolver(KubernetesFacade facade) {
         this.facade = facade;
     }

@@ -20,6 +20,7 @@ import io.zeromagic.doorman.kubernetes.ServiceScaler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
@@ -47,7 +48,8 @@ public class ScaledApplication {
      */
     public record Snapshot(String namespace, String policyName,
                            String serviceName, String deploymentName,
-                           int targetReplicas) {}
+                           int targetReplicas,
+                           Duration idleTimeout) {}
 
     /**
      * Result of {@link #awaitReady()}.

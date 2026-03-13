@@ -27,6 +27,7 @@ import io.zeromagic.doorman.repository.crd.ScalingPolicySpec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import java.time.Duration;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -66,7 +67,8 @@ class ScaledApplicationRegistryIT {
                     @Override public void register(String n, String s) {}
                     @Override public void deregister(String n, String s) {}
                 },
-                stubReader
+                stubReader,
+                Duration.ofMinutes(5)
         );
 
         var policy = createScalingPolicy(ns);

@@ -29,7 +29,7 @@ class ScaledApplicationTest {
 
     private static ScaledApplication app(ServiceState initial) {
         return new ScaledApplication(
-                new ScaledApplication.Snapshot("ns", "policy", "my-svc", "my-deploy", 3),
+                new ScaledApplication.Snapshot("ns", "policy", "my-svc", "my-deploy", 3, java.time.Duration.ofMinutes(5)),
                 initial);
     }
 

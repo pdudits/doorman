@@ -29,6 +29,7 @@ import io.zeromagic.doorman.repository.crd.ScalingPolicyStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -69,7 +70,8 @@ class ScaledApplicationRegistryTest {
                     @Override public void register(String ns, String svc) { registerCalls.add(new RegisterCall(ns, svc)); }
                     @Override public void deregister(String ns, String svc) { deregisterCalls.add(new RegisterCall(ns, svc)); }
                 },
-                reader
+                reader,
+                Duration.ofMinutes(5)
         );
     }
 

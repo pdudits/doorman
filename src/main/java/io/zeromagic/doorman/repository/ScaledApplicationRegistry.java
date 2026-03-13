@@ -17,6 +17,8 @@
 package io.zeromagic.doorman.repository;
 
 import io.fabric8.kubernetes.api.model.apps.Deployment;
+import io.zeromagic.doorman.cli.DurationParser;
+import io.zeromagic.doorman.cli.TraefikConfig;
 import io.zeromagic.doorman.kubernetes.DeploymentStateReader;
 import io.zeromagic.doorman.kubernetes.EndpointRegistrar;
 import io.zeromagic.doorman.kubernetes.ScalingPolicyStatusPatcher;
@@ -27,6 +29,7 @@ import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -54,15 +57,29 @@ public class ScaledApplicationRegistry
     private final ServiceScaler scaler;
     private final EndpointRegistrar registrar;
     private final DeploymentStateReader deploymentReader;
+    private final Duration globalIdleTimeout;
 
+    @jakarta.inject.Inject
     public ScaledApplicationRegistry(ScalingPolicyStatusPatcher statusPatcher,
                                       ServiceScaler scaler,
                                       EndpointRegistrar registrar,
-                                      DeploymentStateReader deploymentReader) {
+                                      DeploymentStateReader deploymentReader,
+                                      TraefikConfig traefikConfig) {
+        this(statusPatcher, scaler, registrar, deploymentReader,
+                DurationParser.parse(traefikConfig.idleTimeout()));
+    }
+
+    /** Test constructor — accepts a pre-parsed global idle timeout. */
+    public ScaledApplicationRegistry(ScalingPolicyStatusPatcher statusPatcher,
+                                      ServiceScaler scaler,
+                                      EndpointRegistrar registrar,
+                                      DeploymentStateReader deploymentReader,
+                                      Duration globalIdleTimeout) {
         this.statusPatcher = statusPatcher;
         this.scaler = scaler;
         this.registrar = registrar;
         this.deploymentReader = deploymentReader;
+        this.globalIdleTimeout = globalIdleTimeout;
     }
 
     // -------------------------------------------------------------------------
@@ -85,7 +102,8 @@ public class ScaledApplicationRegistry
         var snapshot = new ScaledApplication.Snapshot(
                 meta.getNamespace(), meta.getName(),
                 spec.getServiceName(), spec.getDeploymentName(),
-                targetReplicas);
+                targetReplicas,
+                resolveIdleTimeout(spec.getIdleTimeout()));
 
         var app = new ScaledApplication(snapshot, initialState);
         byPolicyKey.put(policyKey, app);
@@ -113,7 +131,8 @@ public class ScaledApplicationRegistry
             var newSnap = new ScaledApplication.Snapshot(
                     meta.getNamespace(), meta.getName(),
                     spec.getServiceName(), spec.getDeploymentName(),
-                    old.targetReplicas());
+                    old.targetReplicas(),
+                    resolveIdleTimeout(spec.getIdleTimeout()));
             app.updateSnapshot(newSnap);
             deploymentIndex.put(deploymentKey(meta.getNamespace(), spec.getDeploymentName()),
                     policyKey(meta.getNamespace(), meta.getName()));
@@ -298,6 +317,13 @@ public class ScaledApplicationRegistry
         }
         var app = byPolicyKey.get(policyKey);
         if (app != null) action.accept(app);
+    }
+
+    private Duration resolveIdleTimeout(String policyIdleTimeout) {
+        if (policyIdleTimeout != null && !policyIdleTimeout.isBlank()) {
+            return DurationParser.parse(policyIdleTimeout);
+        }
+        return globalIdleTimeout;
     }
 
     private static ScalingPolicyPhase toPhase(ServiceState state) {
