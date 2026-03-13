@@ -28,6 +28,12 @@ public class ScalingPolicySpec {
     @JsonProperty("deploymentName")
     private String deploymentName;
 
+    @JsonProperty("ingressName")
+    private String ingressName;
+
+    @JsonProperty("idleTimeout")
+    private String idleTimeout;
+
     public String getServiceName() {
         return serviceName;
     }
@@ -42,5 +48,21 @@ public class ScalingPolicySpec {
 
     public void setDeploymentName(String deploymentName) {
         this.deploymentName = deploymentName;
+    }
+
+    public String getIngressName() {
+        return ingressName;
+    }
+
+    public void setIngressName(String ingressName) {
+        this.ingressName = ingressName;
+    }
+
+    public String getIdleTimeout() {
+        return idleTimeout;
+    }
+
+    public void setIdleTimeout(String idleTimeout) {
+        this.idleTimeout = idleTimeout;
     }
 }

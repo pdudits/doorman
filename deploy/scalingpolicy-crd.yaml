@@ -26,9 +26,14 @@ spec:
                   type: string
                 deploymentName:
                   type: string
+                ingressName:
+                  type: string
+                idleTimeout:
+                  type: string
               required:
                 - serviceName
                 - deploymentName
+                - ingressName
             status:
               type: object
               properties:

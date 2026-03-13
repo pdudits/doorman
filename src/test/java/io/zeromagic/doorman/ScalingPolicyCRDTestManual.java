@@ -67,11 +67,16 @@ class ScalingPolicyCRDTestManual {
                 ScalingPolicySpec spec = new ScalingPolicySpec();
                 spec.setServiceName("manual-service");
                 spec.setDeploymentName("manual-deployment");
+                spec.setIngressName("manual-ingress");
+
                 policy.setSpec(spec);
 
                 createdPolicy = client.resources(ScalingPolicy.class)
                     .inNamespace(namespaceName)
                     .create(policy);
+
+                spec.setIdleTimeout("10m");
+                client.resource(policy).update();
             } finally {
                 if (createdPolicy != null) {
                     client.resources(ScalingPolicy.class)
