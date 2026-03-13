@@ -247,6 +247,23 @@ public class ScaledApplicationRegistry
     }
 
     // -------------------------------------------------------------------------
+    // IdleDetector entry point
+    // -------------------------------------------------------------------------
+
+    /**
+     * Called by the idle detector when a service has been idle long enough to scale down.
+     * Transitions {@code Running → ScalingDown} and patches the ScalingPolicy status.
+     * No-op (with a warning) if the service is not managed.
+     */
+    public void beginScalingDown(String namespace, String serviceName) {
+        withApp(serviceKey(namespace, serviceName), app -> {
+            if (app.beginScalingDown()) {
+                patchStatus(app);
+            }
+        }, () -> LOG.warn("beginScalingDown called for unmanaged service {}/{}", namespace, serviceName));
+    }
+
+    // -------------------------------------------------------------------------
     // Lookups
     // -------------------------------------------------------------------------
 
@@ -270,8 +287,15 @@ public class ScaledApplicationRegistry
     }
 
     private void withApp(String indexKey, java.util.function.Consumer<ScaledApplication> action) {
+        withApp(indexKey, action, () -> {});
+    }
+
+    private void withApp(String indexKey, java.util.function.Consumer<ScaledApplication> action, Runnable notFound) {
         var policyKey = serviceIndex.get(indexKey);
-        if (policyKey == null) return;
+        if (policyKey == null) {
+            notFound.run();
+            return;
+        }
         var app = byPolicyKey.get(policyKey);
         if (app != null) action.accept(app);
     }

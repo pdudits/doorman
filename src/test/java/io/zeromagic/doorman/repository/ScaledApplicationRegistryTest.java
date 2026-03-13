@@ -364,4 +364,38 @@ class ScaledApplicationRegistryTest {
         registry.onDoormanSliceRemoved("ns", "svc");
         assertThat(registerCalls).isEmpty();
     }
+
+    // -------------------------------------------------------------------------
+    // beginScalingDown — idle detector entry point
+    // -------------------------------------------------------------------------
+
+    @Test
+    void beginScalingDown_runningApp_transitionsToScalingDown() {
+        registry.onAdded(policy("ns", "pol", "svc", "dep"));
+        patches.clear();
+
+        registry.beginScalingDown("ns", "svc");
+
+        var app = registry.byServiceName("ns", "svc").orElseThrow();
+        assertThat(app.currentState()).isInstanceOf(ServiceState.ScalingDown.class);
+        assertThat(patches).hasSize(1);
+        assertThat(patches.get(0).phase()).isEqualTo(ScalingPolicyPhase.ScalingDown);
+    }
+
+    @Test
+    void beginScalingDown_unknownService_noEffect() {
+        // must not throw; nothing added to registry
+        registry.beginScalingDown("ns", "not-managed");
+        assertThat(patches).isEmpty();
+    }
+
+    @Test
+    void beginScalingDown_alreadyScalingDown_noDoubleTransition() {
+        registry.onAdded(policy("ns", "pol", "svc", "dep"));
+        registry.beginScalingDown("ns", "svc"); // first call → ScalingDown + patch
+        patches.clear();
+
+        registry.beginScalingDown("ns", "svc"); // second call → no-op
+        assertThat(patches).as("no patch when already ScalingDown").isEmpty();
+    }
 }

@@ -5,7 +5,7 @@ status: Done
 assignee:
   - Copilot
 created_date: '2026-03-13 17:21'
-updated_date: '2026-03-13 17:57'
+updated_date: '2026-03-13 18:11'
 labels:
   - testing
   - kubernetes
@@ -46,7 +46,7 @@ Manual tests (e.g. `TraefikServiceNameResolverTestManual`) exercise real cluster
 - [x] #4 K3sClusterExtension manages K3sContainer + DoormanClusterSetup lifecycle per test class
 - [x] #5 TraefikServiceNameResolverIT runs against real k3s API server without manual cluster
 - [x] #6 maven-failsafe-plugin added; *IT.java runs on verify, excluded from surefire unit test run
-- [ ] #7 No BouncyCastle needed — JDK 21 handles EC keys natively (AC7 rejected with explanation)
+- [x] #7 No BouncyCastle needed — JDK 21 handles EC keys natively (AC7 rejected with explanation)
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -119,6 +119,12 @@ Port `TraefikServiceNameResolverTestManual` to `TraefikServiceNameResolverIT`, u
 - `TraefikServiceNameResolverIT.java` (new)
 - `pom.xml` (k3s dependency + failsafe plugin)
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Root cause of FileNotFoundException: maven-failsafe-plugin forks the JVM with target/ as working directory (not project.basedir like Surefire). Fix: load CRD from classpath via getClassLoader().getResourceAsStream(), with deploy/ added as a testResource directory in pom.xml.
+<!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
