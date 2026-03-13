@@ -47,10 +47,18 @@ You MUST read the overview resource to understand the complete workflow. The inf
 ## Agent Skills
 
 ### When to use the `testing` skill
-Invoke the **`testing` skill** at the start of any task that involves writing or modifying tests — including unit tests, integration tests, manual tests, or test helpers. The skill documents project-specific patterns such as accessor classes for package-private code, the `TestManual` suffix convention, and the `DoormanClusterExtension` for real-cluster tests.
+Invoke the **`testing` skill** at the start of any task that involves writing or modifying tests — including unit tests, integration tests, manual tests, or test helpers. The skill documents project-specific patterns such as accessor classes for package-private code, the `TestManual` suffix convention, and the `ManualInClusterExtension` / `K3sClusterExtension` for real-cluster tests.
 
 ### When to use the `context7` skill
 Invoke the **`context7` skill** during implementation planning whenever the task introduces or extends usage of a third-party library (e.g. Fabric8, Testcontainers, avaje, Picocli). Use it to look up current API before writing code, not after hitting a compile error.
+
+### Planning: present options and ask questions
+When planning a non-trivial implementation, **do not silently pick one approach**. Instead:
+1. Identify the key design decisions where multiple valid options exist.
+2. For each decision, describe the options (with a recommended default where obvious).
+3. Use `ask_user` to confirm each significant choice before writing the plan.
+
+Typical decisions worth surfacing: data model shape, extension/composition strategy, Maven integration approach, error handling policy, naming conventions.
 
 ## Technology Stack
 
