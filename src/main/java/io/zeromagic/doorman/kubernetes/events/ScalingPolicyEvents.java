@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package io.zeromagic.doorman.repository;
+package io.zeromagic.doorman.kubernetes.events;
 
-import io.fabric8.kubernetes.api.model.apps.Deployment;
+import io.zeromagic.doorman.repository.crd.ScalingPolicy;
 
-public interface DeploymentEvents {
-    void onDeploymentChanged(Deployment deployment);
+public interface ScalingPolicyEvents {
+    void onAdded(ScalingPolicy policy);
+    void onUpdated(ScalingPolicy oldPolicy, ScalingPolicy newPolicy);
+    void onDeleted(ScalingPolicy policy);
 }

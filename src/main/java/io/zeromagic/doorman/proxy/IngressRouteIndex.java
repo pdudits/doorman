@@ -16,10 +16,8 @@
 
 package io.zeromagic.doorman.proxy;
 
-import io.avaje.inject.Bean;
-import io.avaje.inject.Factory;
 import io.zeromagic.doorman.kubernetes.KubernetesFacade;
-import io.zeromagic.doorman.repository.ScalingPolicyEvents;
+import io.zeromagic.doorman.kubernetes.events.ScalingPolicyEvents;
 import io.zeromagic.doorman.repository.crd.ScalingPolicy;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;

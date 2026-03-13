@@ -20,7 +20,7 @@ import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressRule;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressServiceBackend;
 import io.zeromagic.doorman.kubernetes.KubernetesFacade;
-import io.zeromagic.doorman.repository.ScalingPolicyEvents;
+import io.zeromagic.doorman.kubernetes.events.ScalingPolicyEvents;
 import io.zeromagic.doorman.repository.crd.ScalingPolicy;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;

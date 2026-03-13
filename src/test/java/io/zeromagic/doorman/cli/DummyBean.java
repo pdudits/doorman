@@ -16,7 +16,7 @@
 
 package io.zeromagic.doorman.cli;
 
-import io.zeromagic.doorman.repository.ScalingPolicyEvents;
+import io.zeromagic.doorman.kubernetes.events.ScalingPolicyEvents;
 import jakarta.inject.Singleton;
 
 @Singleton

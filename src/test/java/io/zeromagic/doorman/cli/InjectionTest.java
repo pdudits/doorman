@@ -19,7 +19,7 @@ package io.zeromagic.doorman.cli;
 import io.avaje.inject.BeanScope;
 import io.zeromagic.doorman.kubernetes.KubernetesFacade;
 import io.zeromagic.doorman.kubernetes.TestKubernetesFacade;
-import io.zeromagic.doorman.repository.ScalingPolicyEvents;
+import io.zeromagic.doorman.kubernetes.events.ScalingPolicyEvents;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 

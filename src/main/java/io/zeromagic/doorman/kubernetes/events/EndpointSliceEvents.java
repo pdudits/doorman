@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.zeromagic.doorman.repository;
+package io.zeromagic.doorman.kubernetes.events;
 
 import io.zeromagic.doorman.kubernetes.EndpointRegistrar;
 

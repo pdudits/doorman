@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.zeromagic.doorman.repository;
+package io.zeromagic.doorman.kubernetes.events;
 
 /**
  * Events derived from the classic Endpoints API (Traefik v2 / older clusters).
