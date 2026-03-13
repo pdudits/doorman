@@ -26,7 +26,7 @@ import java.util.Optional;
 class ConfigProvider {
     @Bean
     Optional<KubernetesConfig> kubernetesConfig(@External CliArgs args) {
-        return Optional.ofNullable(args.kubeContext).map(KubernetesConfig::new);
+        return Optional.ofNullable(args.kubeContext).map(KubernetesConfig.Context::new);
     }
 
     @Bean

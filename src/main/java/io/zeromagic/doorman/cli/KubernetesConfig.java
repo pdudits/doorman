@@ -16,5 +16,15 @@
 
 package io.zeromagic.doorman.cli;
 
-public record KubernetesConfig(String kubeContext) {
+/**
+ * Sealed hierarchy for Kubernetes client configuration.
+ * Either a named kube context (from kubeconfig) or a raw kubeconfig YAML string
+ * (e.g. from a K3sContainer in tests).
+ */
+public sealed interface KubernetesConfig {
+    /** Use a named context from the local kubeconfig file. */
+    record Context(String kubeContext) implements KubernetesConfig {}
+
+    /** Use a full kubeconfig YAML string directly (e.g. from Testcontainers K3s). */
+    record Raw(String kubeConfigYaml) implements KubernetesConfig {}
 }

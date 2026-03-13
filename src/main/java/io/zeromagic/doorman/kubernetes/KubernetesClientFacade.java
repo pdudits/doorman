@@ -54,7 +54,10 @@ class KubernetesClientFacade implements KubernetesFacade {
     KubernetesClientFacade(Optional<KubernetesConfig> config) {
         this.client = config
                 .map(c -> new KubernetesClientBuilder()
-                        .withConfig(Config.autoConfigure(c.kubeContext()))
+                        .withConfig(switch (c) {
+                            case KubernetesConfig.Context ctx -> Config.autoConfigure(ctx.kubeContext());
+                            case KubernetesConfig.Raw raw -> Config.fromKubeconfig(raw.kubeConfigYaml());
+                        })
                         .build())
                 .orElseGet(() -> new KubernetesClientBuilder().build());
     }

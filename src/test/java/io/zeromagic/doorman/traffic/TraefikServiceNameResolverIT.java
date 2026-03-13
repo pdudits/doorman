@@ -17,8 +17,7 @@
 package io.zeromagic.doorman.traffic;
 
 import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
-import io.zeromagic.doorman.ManualInClusterExtension;
-import io.zeromagic.doorman.kubernetes.KubernetesClientFacadeAccessor;
+import io.zeromagic.doorman.k3s.K3sClusterExtension;
 import io.zeromagic.doorman.repository.crd.ScalingPolicy;
 import io.zeromagic.doorman.repository.crd.ScalingPolicySpec;
 import org.junit.jupiter.api.Test;
@@ -26,15 +25,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Manual integration test for {@link TraefikServiceNameResolver} against a real cluster.
- * <p>
- * Run with: {@code mvn -Dtest=TraefikServiceNameResolverTestManual test}
- * <p>
- * Prerequisites: a reachable cluster (default kubeconfig).
- * The CRD is applied automatically from {@code deploy/scalingpolicy-crd.yaml} if absent.
- */
-class TraefikServiceNameResolverTestManual {
+class TraefikServiceNameResolverIT {
 
     private static final String SERVICE = "inttest-svc";
     private static final String INGRESS_NAME = "inttest-ingress";
@@ -43,18 +34,17 @@ class TraefikServiceNameResolverTestManual {
     private static final String INGRESS_NAME_V2 = "inttest-ingress-v2";
 
     @RegisterExtension
-    static final ManualInClusterExtension CLUSTER = new ManualInClusterExtension("doorman-inttest");
+    static final K3sClusterExtension K3S = new K3sClusterExtension("doorman-inttest");
 
     @Test
     void resolverIntegration() {
-        var client = CLUSTER.client();
-        var ns = CLUSTER.namespace();
+        var client = K3S.client();
+        var ns = K3S.namespace();
 
         createIngress(ns, INGRESS_NAME, SERVICE, PORT);
         var policy = createScalingPolicy(ns, INGRESS_NAME);
         try {
-            var facade = KubernetesClientFacadeAccessor.create();
-            var resolver = new TraefikServiceNameResolver(facade);
+            var resolver = new TraefikServiceNameResolver(K3S.facade());
 
             // AC1 + AC2: resolve Traefik label from Ingress
             resolver.onAdded(policy);
@@ -112,7 +102,7 @@ class TraefikServiceNameResolverTestManual {
                     .endRule()
                 .endSpec()
                 .build();
-        CLUSTER.client().network().v1().ingresses().inNamespace(ns).resource(ingress).createOrReplace();
+        K3S.client().network().v1().ingresses().inNamespace(ns).resource(ingress).createOrReplace();
     }
 
     private ScalingPolicy createScalingPolicy(String ns, String ingressName) {
@@ -126,11 +116,11 @@ class TraefikServiceNameResolverTestManual {
         policy.getMetadata().setName("inttest-policy");
         policy.setSpec(spec);
 
-        return CLUSTER.client().resources(ScalingPolicy.class).inNamespace(ns).resource(policy).createOrReplace();
+        return K3S.client().resources(ScalingPolicy.class).inNamespace(ns).resource(policy).createOrReplace();
     }
 
     private ScalingPolicy updateScalingPolicy(String ns, ScalingPolicy existing, String newIngressName) {
         existing.getSpec().setIngressName(newIngressName);
-        return CLUSTER.client().resources(ScalingPolicy.class).inNamespace(ns).resource(existing).update();
+        return K3S.client().resources(ScalingPolicy.class).inNamespace(ns).resource(existing).update();
     }
 }

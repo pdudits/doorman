@@ -25,7 +25,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 class ScalingPolicyCRDTestManual {
 
     @RegisterExtension
-    static final DoormanClusterExtension CLUSTER = new DoormanClusterExtension("0000-0000");
+    static final ManualInClusterExtension CLUSTER = new ManualInClusterExtension("0000-0000");
 
     @Test
     void ensureScalingPolicyCrdAndResourceManual() throws Exception {

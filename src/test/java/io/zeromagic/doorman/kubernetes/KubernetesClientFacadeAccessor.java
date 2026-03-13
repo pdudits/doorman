@@ -16,6 +16,8 @@
 
 package io.zeromagic.doorman.kubernetes;
 
+import io.zeromagic.doorman.cli.KubernetesConfig;
+
 import java.util.Optional;
 
 /**
@@ -33,6 +35,11 @@ public class KubernetesClientFacadeAccessor {
 
     /** Creates a facade bound to a specific kube context. */
     public static KubernetesFacade create(String kubeContext) {
-        return new KubernetesClientFacade(Optional.of(new io.zeromagic.doorman.cli.KubernetesConfig(kubeContext)));
+        return new KubernetesClientFacade(Optional.of(new KubernetesConfig.Context(kubeContext)));
+    }
+
+    /** Creates a facade configured from a raw kubeconfig YAML string (e.g. from K3sContainer). */
+    public static KubernetesFacade createFromKubeConfigYaml(String kubeConfigYaml) {
+        return new KubernetesClientFacade(Optional.of(new KubernetesConfig.Raw(kubeConfigYaml)));
     }
 }
