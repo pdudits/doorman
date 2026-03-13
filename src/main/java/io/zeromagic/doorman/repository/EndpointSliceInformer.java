@@ -44,13 +44,13 @@ public class EndpointSliceInformer implements ResourceEventHandler<EndpointSlice
     private static final String SERVICE_NAME_LABEL = "kubernetes.io/service-name";
     private static final Logger LOG = LoggerFactory.getLogger(EndpointSliceInformer.class);
 
-    private final EndpointSliceEvents events;
+    private final List<EndpointSliceEvents> listeners;
     private final String doormanIp;
     private final KubernetesFacade facade;
     private AutoCloseable informerHandle;
 
-    EndpointSliceInformer(EndpointSliceEvents events, DoormanConfig config, KubernetesFacade facade) {
-        this.events = events;
+    EndpointSliceInformer(List<EndpointSliceEvents> listeners, DoormanConfig config, KubernetesFacade facade) {
+        this.listeners = listeners;
         this.doormanIp = config.podIp();
         this.facade = facade;
     }
@@ -81,7 +81,7 @@ public class EndpointSliceInformer implements ResourceEventHandler<EndpointSlice
         var svc = serviceNameOf(obj);
         if (svc == null) return;
         LOG.info("EndpointSlice DELETED: {}/{}", ns, svc);
-        events.onRealSlicesDrained(ns, svc);
+        listeners.forEach(l -> l.onRealSlicesDrained(ns, svc));
     }
 
     private void evaluate(EndpointSlice slice) {
@@ -103,12 +103,12 @@ public class EndpointSliceInformer implements ResourceEventHandler<EndpointSlice
         LOG.info("EndpointSlice {}/{}: doormanPresent={} realReady={}", ns, svc, doormanPresent, realReady);
 
         if (!doormanPresent) {
-            events.onDoormanSliceRemoved(ns, svc);
+            listeners.forEach(l -> l.onDoormanSliceRemoved(ns, svc));
         }
         if (realReady) {
-            events.onRealSlicesReady(ns, svc);
+            listeners.forEach(l -> l.onRealSlicesReady(ns, svc));
         } else {
-            events.onRealSlicesDrained(ns, svc);
+            listeners.forEach(l -> l.onRealSlicesDrained(ns, svc));
         }
     }
 

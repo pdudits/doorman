@@ -25,17 +25,19 @@ import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
 @Singleton
 public class ScalingPolicyInformer implements ResourceEventHandler<ScalingPolicy> {
 
     private static final Logger LOG = LoggerFactory.getLogger(ScalingPolicyInformer.class);
 
-    private final ScalingPolicyEvents events;
+    private final List<ScalingPolicyEvents> listeners;
     private final KubernetesFacade facade;
     private AutoCloseable informerHandle;
 
-    ScalingPolicyInformer(ScalingPolicyEvents events, KubernetesFacade facade) {
-        this.events = events;
+    ScalingPolicyInformer(List<ScalingPolicyEvents> listeners, KubernetesFacade facade) {
+        this.listeners = listeners;
         this.facade = facade;
     }
 
@@ -52,18 +54,18 @@ public class ScalingPolicyInformer implements ResourceEventHandler<ScalingPolicy
     @Override
     public void onAdd(ScalingPolicy obj) {
         LOG.info("ScalingPolicy ADDED: {}/{}", obj.getMetadata().getNamespace(), obj.getMetadata().getName());
-        events.onAdded(obj);
+        listeners.forEach(l -> l.onAdded(obj));
     }
 
     @Override
     public void onUpdate(ScalingPolicy oldObj, ScalingPolicy newObj) {
         LOG.info("ScalingPolicy UPDATED: {}/{}", newObj.getMetadata().getNamespace(), newObj.getMetadata().getName());
-        events.onUpdated(oldObj, newObj);
+        listeners.forEach(l -> l.onUpdated(oldObj, newObj));
     }
 
     @Override
     public void onDelete(ScalingPolicy obj, boolean deletedFinalStateUnknown) {
         LOG.info("ScalingPolicy DELETED: {}/{}", obj.getMetadata().getNamespace(), obj.getMetadata().getName());
-        events.onDeleted(obj);
+        listeners.forEach(l -> l.onDeleted(obj));
     }
 }

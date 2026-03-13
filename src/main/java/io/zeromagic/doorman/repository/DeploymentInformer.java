@@ -25,17 +25,19 @@ import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
 @Singleton
 public class DeploymentInformer implements ResourceEventHandler<Deployment> {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeploymentInformer.class);
 
-    private final DeploymentEvents events;
+    private final List<DeploymentEvents> listeners;
     private final KubernetesFacade facade;
     private AutoCloseable informerHandle;
 
-    DeploymentInformer(DeploymentEvents events, KubernetesFacade facade) {
-        this.events = events;
+    DeploymentInformer(List<DeploymentEvents> listeners, KubernetesFacade facade) {
+        this.listeners = listeners;
         this.facade = facade;
     }
 
@@ -52,19 +54,19 @@ public class DeploymentInformer implements ResourceEventHandler<Deployment> {
     @Override
     public void onAdd(Deployment obj) {
         logDeployment("ADDED", obj);
-        events.onDeploymentChanged(obj);
+        listeners.forEach(l -> l.onDeploymentChanged(obj));
     }
 
     @Override
     public void onUpdate(Deployment oldObj, Deployment newObj) {
         logDeployment("UPDATED", newObj);
-        events.onDeploymentChanged(newObj);
+        listeners.forEach(l -> l.onDeploymentChanged(newObj));
     }
 
     @Override
     public void onDelete(Deployment obj, boolean deletedFinalStateUnknown) {
         logDeployment("DELETED", obj);
-        events.onDeploymentChanged(obj);
+        listeners.forEach(l -> l.onDeploymentChanged(obj));
     }
 
     private void logDeployment(String event, Deployment d) {

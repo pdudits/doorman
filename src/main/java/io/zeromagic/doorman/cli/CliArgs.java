@@ -65,5 +65,5 @@ public class CliArgs {
     @CommandLine.Option(names = "--scale-up-timeout",
             description = "Maximum time to wait for a service to become ready before returning 503 (default: 60s).",
             defaultValue = "60s")
-    String scaleUpTimeout;
+    String scaleUpTimeout = "60s";
 }

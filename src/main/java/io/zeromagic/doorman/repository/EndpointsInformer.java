@@ -41,13 +41,13 @@ public class EndpointsInformer implements ResourceEventHandler<Endpoints> {
 
     private static final Logger LOG = LoggerFactory.getLogger(EndpointsInformer.class);
 
-    private final EndpointsEvents events;
+    private final List<EndpointsEvents> listeners;
     private final String doormanIp;
     private final KubernetesFacade facade;
     private AutoCloseable informerHandle;
 
-    EndpointsInformer(EndpointsEvents events, DoormanConfig config, KubernetesFacade facade) {
-        this.events = events;
+    EndpointsInformer(List<EndpointsEvents> listeners, DoormanConfig config, KubernetesFacade facade) {
+        this.listeners = listeners;
         this.doormanIp = config.podIp();
         this.facade = facade;
     }
@@ -78,7 +78,7 @@ public class EndpointsInformer implements ResourceEventHandler<Endpoints> {
         var ns = obj.getMetadata().getNamespace();
         var svc = obj.getMetadata().getName();
         LOG.info("Endpoints DELETED: {}/{}", ns, svc);
-        events.onRealEndpointsDrained(ns, svc);
+        listeners.forEach(l -> l.onRealEndpointsDrained(ns, svc));
     }
 
     private void evaluate(Endpoints ep) {
@@ -99,12 +99,12 @@ public class EndpointsInformer implements ResourceEventHandler<Endpoints> {
         LOG.info("Endpoints {}/{}: doormanPresent={} realReady={}", ns, svc, doormanPresent, realReady);
 
         if (!doormanPresent) {
-            events.onDoormanEndpointRemoved(ns, svc);
+            listeners.forEach(l -> l.onDoormanEndpointRemoved(ns, svc));
         }
         if (realReady) {
-            events.onRealEndpointsReady(ns, svc);
+            listeners.forEach(l -> l.onRealEndpointsReady(ns, svc));
         } else {
-            events.onRealEndpointsDrained(ns, svc);
+            listeners.forEach(l -> l.onRealEndpointsDrained(ns, svc));
         }
     }
 }
