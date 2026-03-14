@@ -60,6 +60,7 @@ public class K3sClusterExtension implements BeforeAllCallback, AfterAllCallback 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         container = new K3sContainer(K3S_IMAGE);
+        configureContainer(container);
         container.start();
 
         client = new KubernetesClientBuilder()
@@ -78,6 +79,21 @@ public class K3sClusterExtension implements BeforeAllCallback, AfterAllCallback 
             if (client != null) client.close();
             if (container != null) container.stop();
         }
+    }
+
+    /**
+     * Hook for subclasses to configure the container before it starts.
+     * For example, subclasses may expose additional ports or copy files into the container.
+     * The default implementation is a no-op.
+     */
+    protected void configureContainer(K3sContainer container) {}
+
+    /**
+     * Returns the host port mapped from the given container port.
+     * Only valid after the container has started.
+     */
+    protected int getMappedPort(int containerPort) {
+        return container.getMappedPort(containerPort);
     }
 
     /** The Kubernetes client connected to the k3s cluster. */
