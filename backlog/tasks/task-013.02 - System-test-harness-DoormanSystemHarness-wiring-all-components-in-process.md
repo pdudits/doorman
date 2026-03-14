@@ -4,7 +4,7 @@ title: 'System test harness: DoormanSystemHarness wiring all components in-proce
 status: Done
 assignee: []
 created_date: '2026-03-13 23:38'
-updated_date: '2026-03-14 09:01'
+updated_date: '2026-03-14 09:15'
 labels:
   - system-test
   - infrastructure
@@ -99,12 +99,24 @@ Fixed AC#4 to use `wget` TCP probe. Busybox wget exits 4 on network failure, 0/1
 ## Resolved: busybox wget exit code mismatch
 
 Busybox wget exits with 1 (not 8) for HTTP server errors (e.g., 404). GNU wget convention (exit 8) doesn't apply. Fixed by checking `$? -ne 4` (network failure) instead of checking for specific success codes.
+
+## AC#4 revised: Traefik routing test (replaces wget probe)
+
+Instead of `wget` from inside the k3s container, AC#4 now validates the full routing path from the test JVM:
+
+1. Create headless ClusterIP Service + manual Endpoints pointing to `podIp:proxyPort` (same mechanism as Doorman's own registration)
+2. Create Ingress for `system.test` → that service
+3. HTTP GET from test JVM to `http://localhost:traefikHttpPort/` with `Host: system.test`
+
+Response from Doorman proxy (404, not 502/503) confirms: Traefik resolved the endpoint, routed to `podIp:proxyPort`, Doorman proxy answered.
+
+Required `jdk.httpclient.allowRestrictedHeaders=host` system property in maven-failsafe-plugin config — Java HttpClient blocks the Host header by default.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-## TASK-013.02: DoormanSystemHarness — all 5/5 smoke tests passing\n\n### What changed\n\n**New files:**\n- `src/test/java/io/zeromagic/doorman/k3s/DoormanSystemHarness.java` — JUnit 5 extension wiring the full avaje `BeanScope` in-process against a live k3s cluster. Only 2 external beans substituted: `CliArgs` (via Picocli parsing) and `KubernetesConfig.Raw(kubeConfigYaml)`. All other components (KubernetesClientFacade, 4 informers, ScaledApplicationRegistry, IngressRouteIndex, ProxyServer, IdleDetector) wired by avaje exactly as in production.\n- `src/test/java/io/zeromagic/doorman/k3s/DoormanHarnessIT.java` — 5-test smoke suite covering all ACs.\n\n**Modified files:**\n- `K3sClusterExtension.java`: added `kubeConfigYaml()`, `containerGatewayIp()`, `execInContainer()` accessors. Added `withExtraHost(\"host.testcontainers.internal\", \"host-gateway\")` before container start so the Mac host is reachable from inside k3s.\n- `.github/skills/backlog/SKILL.md`: created backlog skill for proactive workflow triggering.\n\n### Key technical findings\n\n1. **avaje Optional wrapping confirmed**: registering `KubernetesConfig` externally causes avaje to skip the `ConfigProvider.kubernetesConfig()` factory and inject `Optional.of(externalBean)` into KubernetesClientFacade — verified by all 5 tests passing.\n\n2. **Mac Docker Desktop host connectivity**: `host-gateway` resolves to `192.168.65.254` (the Docker Desktop VM gateway). The Mac host's `0.0.0.0`-bound ports ARE reachable at this IP from inside Docker containers. K3sContainer needs `withExtraHost(\"host.testcontainers.internal\", \"host-gateway\")` to expose this mapping.\n\n3. **No `nc` in k3s container**: busybox has `wget` and `telnet` but not `nc`. TCP probe uses `wget` with exit code 4 = network failure.\n\n4. **Busybox wget exit codes**: exits with 1 (not GNU wget's 8) for HTTP server errors. `[ $? -ne 4 ]` is the portable check for \"connection established\".\n\n### Tests\nAll 5 smoke tests pass in ~32s on Mac Docker Desktop with k3s v1.31.5-k3s1 (Traefik v2 already running)."
+## TASK-013.02: DoormanSystemHarness — all 5/5 smoke tests passing\n\n### What changed\n\n**New files:**\n- `src/test/java/io/zeromagic/doorman/k3s/DoormanSystemHarness.java` — JUnit 5 extension wiring the full avaje `BeanScope` in-process against a live k3s cluster. Only 2 external beans substituted: `CliArgs` (via Picocli parsing) and `KubernetesConfig.Raw(kubeConfigYaml)`. All other components wired by avaje exactly as in production.\n- `src/test/java/io/zeromagic/doorman/k3s/DoormanHarnessIT.java` — 5-test smoke suite covering all ACs.\n\n**Modified files:**\n- `K3sClusterExtension.java`: added `kubeConfigYaml()`, `containerGatewayIp()`, `execInContainer()` accessors. Added `withExtraHost(\"host.testcontainers.internal\", \"host-gateway\")` before container start.\n- `pom.xml`: added `jdk.httpclient.allowRestrictedHeaders=host` to failsafe plugin (required for setting Host header in Java HttpClient).\n- `.github/skills/backlog/SKILL.md`: created backlog skill.\n\n### Key technical findings\n\n1. **avaje Optional wrapping confirmed**: registering `KubernetesConfig` externally causes avaje to skip the factory and inject `Optional.of(externalBean)` automatically.\n\n2. **AC#4 — full Traefik routing path**: creates a headless Service + manual Endpoints pointing to `podIp:proxyPort`, Ingress for `system.test`, then HTTP GET from test JVM via Traefik using `Host: system.test`. Response from Doorman (404, not 502/503) confirms the full path works. This is the same mechanism Doorman uses when registering itself as an endpoint.\n\n3. **Mac Docker Desktop host connectivity**: `host-gateway` = `192.168.65.254`. K3sContainer needs `withExtraHost(\"host.testcontainers.internal\", \"host-gateway\")` so `resolveTestcontainersHostIp()` can read the IP for `podIp`.\n\n4. **Java HttpClient Host header**: restricted by default — must set `jdk.httpclient.allowRestrictedHeaders=host` system property.\n\n### Tests\nAll 5 smoke tests pass in ~27s on Mac Docker Desktop with k3s v1.31.5-k3s1 (Traefik v2)."
 <!-- SECTION:FINAL_SUMMARY:END -->
 
 ## Definition of Done

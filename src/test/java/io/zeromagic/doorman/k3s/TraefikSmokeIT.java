@@ -21,6 +21,7 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
+import io.zeromagic.doorman.traffic.OpenMetricsParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -30,6 +31,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -138,6 +140,115 @@ class TraefikSmokeIT {
 
         assertThat(response.statusCode()).as("metrics HTTP status").isEqualTo(200);
         assertThat(response.body()).as("metrics body").contains("traefik_");
+    }
+
+    /**
+     * Verifies that Traefik generates per-service request counters in Prometheus metrics.
+     *
+     * <p>This is the key prerequisite for Doorman's idle detection: {@link io.zeromagic.doorman.traffic.IdleDetector}
+     * reads {@code traefik_service_requests_total{service="{namespace}-{name}-{port}@kubernetes"}}
+     * to decide when a service is idle. If the counter never appears, Doorman would never scale down.
+     *
+     * <p>Traefik v2 enables {@code addServicesLabels} by default. This test confirms the label is
+     * present in the actual cluster so the idle-detection scraper can rely on it.
+     *
+     * <p>The echo service is deployed and routed through Traefik. After a successful response
+     * the metric {@code traefik_service_requests_total{service="traefik-smoke-it-echo-smoke-80@kubernetes"}}
+     * must have a count > 0.
+     */
+    @Test
+    void traefik_generates_per_service_request_counter() throws Exception {
+        var ns = K3S.namespace();
+        var client = K3S.client();
+
+        // Deploy the echo app (reuse the same image + setup as echo_server_accessible_through_traefik)
+        client.apps().deployments().inNamespace(ns).resource(
+                new DeploymentBuilder()
+                        .withNewMetadata().withName("echo-metrics").withNamespace(ns).endMetadata()
+                        .withNewSpec()
+                            .withReplicas(1)
+                            .withNewSelector().addToMatchLabels("app", "echo-metrics").endSelector()
+                            .withNewTemplate()
+                                .withNewMetadata().addToLabels("app", "echo-metrics").endMetadata()
+                                .withNewSpec()
+                                    .addNewContainer()
+                                        .withName("echo")
+                                        .withImage(ECHO_IMAGE)
+                                        .addNewPort().withContainerPort(8080).endPort()
+                                    .endContainer()
+                                .endSpec()
+                            .endTemplate()
+                        .endSpec()
+                        .build()
+        ).create();
+
+        client.services().inNamespace(ns).resource(
+                new ServiceBuilder()
+                        .withNewMetadata().withName("echo-metrics").withNamespace(ns).endMetadata()
+                        .withNewSpec()
+                            .addToSelector("app", "echo-metrics")
+                            .addNewPort().withPort(80).withTargetPort(new IntOrString(8080)).withName("http").endPort()
+                        .endSpec()
+                        .build()
+        ).create();
+
+        client.network().v1().ingresses().inNamespace(ns).resource(
+                new IngressBuilder()
+                        .withNewMetadata().withName("echo-metrics").withNamespace(ns).endMetadata()
+                        .withNewSpec()
+                            .addNewRule()
+                                .withHost("echo-metrics.test")
+                                .withNewHttp()
+                                    .addNewPath()
+                                        .withPath("/").withPathType("Prefix")
+                                        .withNewBackend()
+                                            .withNewService()
+                                                .withName("echo-metrics")
+                                                .withNewPort().withNumber(80).endPort()
+                                            .endService()
+                                        .endBackend()
+                                    .endPath()
+                                .endHttp()
+                            .endRule()
+                        .endSpec()
+                        .build()
+        ).create();
+
+        awaitPodReady(ns, "app", "echo-metrics");
+
+        // Route a request through Traefik so it records a counter for the echo-metrics service.
+        var httpClient = HttpClient.newHttpClient();
+        retryUntilSuccess(httpClient,
+                URI.create("http://echo-metrics.test:" + K3S.traefikHttpPort() + "/"),
+                "{}", Duration.ofSeconds(30));
+
+        // Traefik service label: {namespace}-{serviceName}-{ingressBackendPort}@kubernetes
+        String expectedLabel = ns + "-echo-metrics-80@kubernetes";
+
+        // Poll metrics until the per-service counter appears.
+        var parser = new OpenMetricsParser();
+        var found = new AtomicReference<Double>();
+        var deadline = Instant.now().plusSeconds(10);
+        while (found.get() == null && Instant.now().isBefore(deadline)) {
+            var metricsResp = httpClient.send(
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(K3S.traefikMetricsUrl()))
+                            .GET().build(),
+                    HttpResponse.BodyHandlers.ofString());
+            parser.parse(metricsResp.body(), sample -> {
+                if ("traefik_service_requests_total".equals(sample.metricName())
+                        && expectedLabel.equals(sample.labels().get("service"))) {
+                    found.set(sample.value());
+                }
+            });
+            if (found.get() == null) Thread.sleep(500);
+        }
+
+        assertThat(found.get())
+                .as("traefik_service_requests_total{service=\"%s\"} should be > 0 after routing a request",
+                        expectedLabel)
+                .isNotNull()
+                .isGreaterThan(0.0);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

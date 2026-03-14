@@ -122,6 +122,12 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <systemPropertyVariables>
+                        <!-- Allow setting Host header in java.net.http.HttpClient for Traefik routing tests -->
+                        <jdk.httpclient.allowRestrictedHeaders>host</jdk.httpclient.allowRestrictedHeaders>
+                    </systemPropertyVariables>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

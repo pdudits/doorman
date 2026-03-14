@@ -17,11 +17,16 @@
 package io.zeromagic.doorman.k3s;
 
 import io.avaje.inject.BeanScope;
+import io.fabric8.kubernetes.api.model.EndpointAddressBuilder;
+import io.fabric8.kubernetes.api.model.EndpointPortBuilder;
+import io.fabric8.kubernetes.api.model.EndpointSubsetBuilder;
+import io.fabric8.kubernetes.api.model.EndpointsBuilder;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
 import io.zeromagic.doorman.cli.CliArgs;
+import io.zeromagic.doorman.cli.DoormanConfig;
 import io.zeromagic.doorman.cli.KubernetesConfig;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyPhase;
@@ -204,6 +209,43 @@ public class DoormanSystemHarness implements BeforeAllCallback, AfterAllCallback
                                 .endHttp()
                             .endRule()
                         .endSpec()
+                        .build()
+        ).create();
+    }
+
+    /**
+     * Creates a headless Service (ClusterIP, no selector) and a matching Endpoints resource
+     * pointing to the Doorman proxy running in the test JVM.
+     *
+     * <p>This lets Traefik route through a standard Kubernetes Service to the in-process proxy
+     * without any DNS resolution of external hostnames — the endpoint IP ({@link DoormanConfig#podIp()})
+     * is the Docker host-gateway IP already known to the cluster.
+     *
+     * <p>Pair with {@link #createIngress(String, String, String)} to make requests routable
+     * via Traefik from the test JVM using a Host header.
+     */
+    public void createProxyService(String namespace, String name) {
+        var client = ext.client();
+        var config = scope.get(DoormanConfig.class);
+
+        client.services().inNamespace(namespace).resource(
+                new ServiceBuilder()
+                        .withNewMetadata().withName(name).withNamespace(namespace).endMetadata()
+                        .withNewSpec()
+                            .withClusterIP("None")   // headless — kube-proxy doesn't intercept; Traefik resolves endpoints directly
+                            .addNewPort().withPort(80).withTargetPort(new IntOrString(config.proxyPort())).endPort()
+                        .endSpec()
+                        .build()
+        ).create();
+
+        client.endpoints().inNamespace(namespace).resource(
+                new EndpointsBuilder()
+                        .withNewMetadata().withName(name).withNamespace(namespace).endMetadata()
+                        .withSubsets(new EndpointSubsetBuilder()
+                                .withAddresses(new EndpointAddressBuilder().withIp(config.podIp()).build())
+                                .withPorts(new EndpointPortBuilder()
+                                        .withPort(config.proxyPort()).withProtocol("TCP").build())
+                                .build())
                         .build()
         ).create();
     }

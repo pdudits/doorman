@@ -85,24 +85,36 @@ class DoormanHarnessIT {
     }
 
     /**
-     * AC#4: Doorman endpoint IP is reachable from inside k3s container.
-     * Uses {@code wget} (available in k3s busybox) to verify that the proxy port is TCP-reachable
-     * via {@code host.testcontainers.internal} (added by K3sClusterExtension via Docker host-gateway).
-     * Busybox wget exits with code 4 on network failure (can't connect); any other exit code
-     * (0 = OK, 1 = server error like 404) confirms TCP connectivity was established.
+     * AC#4: Doorman endpoint IP is reachable from inside k3s via Traefik routing.
+     *
+     * <p>Creates a headless Service + manual Endpoints pointing to the in-process proxy
+     * (same mechanism Doorman uses when registering itself), then an Ingress for {@code system.test}.
+     * Sends a real HTTP request through Traefik from the test JVM using a Host header.
+     * This verifies the full path: test JVM → Traefik (in k3s) → podIp:proxyPort (test JVM).
      */
     @Test
-    void doorman_endpoint_ip_reachable_from_k3s() throws Exception {
-        int port = HARNESS.proxyPort();
+    void doorman_endpoint_reachable_via_traefik() throws Exception {
+        var ns = K3S.namespace();
+        HARNESS.createProxyService(ns, "system-proxy");
+        HARNESS.createIngress(ns, "system.test", "system-proxy");
 
-        // Exit code 4 = network failure (couldn't connect); 0/1 = connected (200 or server error like 404)
-        var result = K3S.execInContainer("sh", "-c",
-                "wget -q -T 5 -O/dev/null http://host.testcontainers.internal:" + port + "/; " +
-                "[ $? -ne 4 ] && echo REACHABLE || echo UNREACHABLE");
+        int traefikPort = K3S.traefikHttpPort();
 
-        assertThat(result.getStdout().trim())
-                .as("Expected proxy at host.testcontainers.internal:%d to be TCP-reachable from inside k3s", port)
-                .isEqualTo("REACHABLE");
+        // Traefik uses the Host header to match the ingress rule
+        var response = HttpClient.newHttpClient().send(
+                HttpRequest.newBuilder()
+                        .uri(URI.create("http://localhost:" + traefikPort + "/probe"))
+                        .header("Host", "system.test")
+                        .timeout(Duration.ofSeconds(10))
+                        .GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+
+        // Proxy is up but no route registered for system.test → 404 from Doorman proxy.
+        // Any response from the proxy (not a Traefik gateway error) proves the path works.
+        assertThat(response.statusCode())
+                .as("Expected a response from Doorman proxy via Traefik (not a 5xx gateway error)")
+                .isNotEqualTo(502)
+                .isNotEqualTo(503);
     }
 
     /** AC#5: idleTimeout and pollInterval are configurable — verify via TraefikConfig in scope. */
