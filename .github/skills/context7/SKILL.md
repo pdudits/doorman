@@ -1,6 +1,6 @@
 ---
 name: context7
-description: Service to consult in case of Compilation error, method not existing, looking idiomatic example, library API, planning implementation
+description: Look up current API for project libraries (Testcontainers, Fabric8, avaje, Picocli, JUnit 5) BEFORE writing code. Use proactively during implementation planning to verify method signatures and find idiomatic examples — not only after hitting a compile error.
 ---
 
 # Context7 as source of up-to-date code documnentation
