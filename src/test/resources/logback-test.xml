@@ -1,0 +1,20 @@
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %-36logger{36} %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Doorman's own code at DEBUG so we see request parking, redirects, state transitions -->
+    <logger name="io.zeromagic.doorman" level="DEBUG"/>
+
+    <!-- suppress noisy k8s client and testcontainers chatter -->
+    <logger name="io.fabric8" level="WARN"/>
+    <logger name="okhttp3" level="WARN"/>
+    <logger name="org.testcontainers" level="INFO"/>
+    <logger name="com.github.dockerjava" level="WARN"/>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>

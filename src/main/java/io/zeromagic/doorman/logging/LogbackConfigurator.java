@@ -19,33 +19,30 @@ package io.zeromagic.doorman.logging;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.encoder.JsonEncoder;
 import ch.qos.logback.classic.spi.Configurator;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.ConsoleAppender;
 import ch.qos.logback.core.spi.ContextAwareBase;
+import net.logstash.logback.encoder.LogstashEncoder;
 
 public class LogbackConfigurator extends ContextAwareBase implements Configurator {
 
     @Override
     public ExecutionStatus configure(LoggerContext loggerContext) {
+        // Defer to logback-test.xml when running under tests — it takes precedence
+        if (getClass().getClassLoader().getResource("logback-test.xml") != null) {
+            return ExecutionStatus.NEUTRAL;
+        }
+
         loggerContext.reset();
 
-        JsonEncoder encoder = new JsonEncoder();
+        LogstashEncoder encoder = new LogstashEncoder();
         encoder.setContext(loggerContext);
-        encoder.setWithTimestamp(true);
-        encoder.setWithLevel(true);
-        encoder.setWithThreadName(true);
-        encoder.setWithLoggerName(true);
-        encoder.setWithMessage(false);
-        encoder.setWithFormattedMessage(true);
-        encoder.setWithThrowable(true);
-        encoder.setWithMDC(true);
         encoder.start();
 
         ConsoleAppender<ILoggingEvent> consoleAppender = new ConsoleAppender<>();
         consoleAppender.setContext(loggerContext);
-        consoleAppender.setName("JSON");
+        consoleAppender.setName("LOGSTASH");
         consoleAppender.setEncoder(encoder);
         consoleAppender.start();
 
