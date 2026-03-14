@@ -61,6 +61,11 @@ public class K3sClusterExtension implements BeforeAllCallback, AfterAllCallback 
     public void beforeAll(ExtensionContext context) throws Exception {
         container = new K3sContainer(K3S_IMAGE);
         configureContainer(container);
+        // Make the Docker host reachable from inside the container as host.testcontainers.internal.
+        // Docker resolves "host-gateway" to the appropriate host IP on each platform
+        // (Linux: docker bridge gateway; Mac/Windows: VM gateway that reaches the real host).
+        // Required by DoormanSystemHarness for podIp and endpoint reachability probes.
+        container.withExtraHost("host.testcontainers.internal", "host-gateway");
         container.start();
 
         client = new KubernetesClientBuilder()
@@ -120,5 +125,27 @@ public class K3sClusterExtension implements BeforeAllCallback, AfterAllCallback 
      */
     public KubernetesFacade facade(io.zeromagic.doorman.cli.DoormanConfig doormanConfig) {
         return KubernetesClientFacadeAccessor.createFromKubeConfigYaml(container.getKubeConfigYaml(), doormanConfig);
+    }
+
+    /** The raw kubeconfig YAML for this k3s cluster. Use with {@code KubernetesConfig.Raw} to wire avaje in tests. */
+    public String kubeConfigYaml() {
+        return container.getKubeConfigYaml();
+    }
+
+    /**
+     * The Docker bridge gateway IP — the IP address of the test JVM's host as seen from inside
+     * the k3s container. Use as {@code podIp} when registering Doorman as a service endpoint so
+     * that Traefik (inside k3s) can route requests back to the test JVM's proxy port.
+     */
+    public String containerGatewayIp() {
+        return container.getContainerInfo().getNetworkSettings().getGateway();
+    }
+
+    /**
+     * Executes a command inside the k3s container. Useful for connectivity probes in tests.
+     */
+    public org.testcontainers.containers.Container.ExecResult execInContainer(String... cmd)
+            throws Exception {
+        return container.execInContainer(cmd);
     }
 }
