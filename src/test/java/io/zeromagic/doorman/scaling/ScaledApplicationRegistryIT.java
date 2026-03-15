@@ -73,7 +73,7 @@ class ScaledApplicationRegistryIT {
 
         var policy = createScalingPolicy(ns);
         try {
-            registry.onAdded(policy);
+            registry.onPolicyAdded(policy);
 
             assertThat(registry.byServiceName(ns, SERVICE).orElseThrow().currentState())
                     .as("initial state should be Running (stub returns 1 ready replica)")

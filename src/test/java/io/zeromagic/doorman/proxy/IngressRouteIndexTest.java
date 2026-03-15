@@ -113,7 +113,7 @@ class IngressRouteIndexTest {
     @Test
     void resolve_basicMatch() {
         facade.stubIngress(ingress(NS, INGRESS_NAME, HOST, "/api", SERVICE));
-        index.onAdded(policy(NS, SERVICE, INGRESS_NAME));
+        index.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
 
         Optional<RouteTarget> result = index.resolve(HOST, "/api/users");
 
@@ -123,7 +123,7 @@ class IngressRouteIndexTest {
     @Test
     void resolve_longestPrefixWins() {
         facade.stubIngress(ingressTwoPaths(NS, INGRESS_NAME, HOST, "/api", "/api/v2", SERVICE));
-        index.onAdded(policy(NS, SERVICE, INGRESS_NAME));
+        index.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
 
         assertThat(index.resolve(HOST, "/api/v2/users")).contains(new RouteTarget(NS, SERVICE));
         assertThat(index.resolve(HOST, "/api/v1/users")).contains(new RouteTarget(NS, SERVICE));
@@ -132,7 +132,7 @@ class IngressRouteIndexTest {
     @Test
     void resolve_unknownHost_returnsEmpty() {
         facade.stubIngress(ingress(NS, INGRESS_NAME, HOST, "/", SERVICE));
-        index.onAdded(policy(NS, SERVICE, INGRESS_NAME));
+        index.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
 
         assertThat(index.resolve("other.example.com", "/")).isEmpty();
     }
@@ -140,7 +140,7 @@ class IngressRouteIndexTest {
     @Test
     void resolve_pathNotPrefixed_returnsEmpty() {
         facade.stubIngress(ingress(NS, INGRESS_NAME, HOST, "/api", SERVICE));
-        index.onAdded(policy(NS, SERVICE, INGRESS_NAME));
+        index.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
 
         assertThat(index.resolve(HOST, "/other")).isEmpty();
     }
@@ -149,24 +149,24 @@ class IngressRouteIndexTest {
     void resolve_onDeleted_removesEntries() {
         facade.stubIngress(ingress(NS, INGRESS_NAME, HOST, "/api", SERVICE));
         var p = policy(NS, SERVICE, INGRESS_NAME);
-        index.onAdded(p);
+        index.onPolicyAdded(p);
         assertThat(index.resolve(HOST, "/api/x")).isPresent();
 
-        index.onDeleted(p);
+        index.onPolicyDeleted(p);
 
         assertThat(index.resolve(HOST, "/api/x")).isEmpty();
     }
 
     @Test
-    void resolve_onUpdated_replacesEntries() {
+    void resolve_onPolicyUpdated_replacesEntries() {
         facade.stubIngress(ingress(NS, INGRESS_NAME, HOST, "/old", SERVICE));
         var oldPolicy = policy(NS, SERVICE, INGRESS_NAME);
-        index.onAdded(oldPolicy);
+        index.onPolicyAdded(oldPolicy);
         assertThat(index.resolve(HOST, "/old/x")).isPresent();
 
         String newIngressName = "new-ingress";
         facade.stubIngress(ingress(NS, newIngressName, HOST, "/new", SERVICE));
-        index.onUpdated(oldPolicy, policy(NS, SERVICE, newIngressName));
+        index.onPolicyUpdated(oldPolicy, policy(NS, SERVICE, newIngressName));
 
         assertThat(index.resolve(HOST, "/old/x")).isEmpty();
         assertThat(index.resolve(HOST, "/new/x")).contains(new RouteTarget(NS, SERVICE));
@@ -175,14 +175,14 @@ class IngressRouteIndexTest {
     @Test
     void resolve_hostWithPort_stripsPort() {
         facade.stubIngress(ingress(NS, INGRESS_NAME, HOST, "/api", SERVICE));
-        index.onAdded(policy(NS, SERVICE, INGRESS_NAME));
+        index.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
 
         assertThat(index.resolve(HOST + ":8080", "/api/data")).contains(new RouteTarget(NS, SERVICE));
     }
 
     @Test
     void resolve_noIngressName_skipsGracefully() {
-        index.onAdded(policy(NS, SERVICE, ""));
+        index.onPolicyAdded(policy(NS, SERVICE, ""));
 
         assertThat(index.resolve(HOST, "/")).isEmpty();
     }
@@ -190,7 +190,7 @@ class IngressRouteIndexTest {
     @Test
     void resolve_ingressNotFound_returnsEmpty() {
         // No ingress stubbed — facade.getIngress() returns empty
-        index.onAdded(policy(NS, SERVICE, INGRESS_NAME));
+        index.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
 
         assertThat(index.resolve(HOST, "/")).isEmpty();
     }
@@ -198,7 +198,7 @@ class IngressRouteIndexTest {
     @Test
     void resolve_serviceNotInIngress_returnsEmpty() {
         facade.stubIngress(ingress(NS, INGRESS_NAME, HOST, "/api", "other-svc"));
-        index.onAdded(policy(NS, SERVICE, INGRESS_NAME));
+        index.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
 
         assertThat(index.resolve(HOST, "/api/x")).isEmpty();
     }

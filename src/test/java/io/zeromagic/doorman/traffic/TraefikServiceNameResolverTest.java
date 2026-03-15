@@ -98,7 +98,7 @@ class TraefikServiceNameResolverTest {
     @Test
     void resolve_happyPath_ingressRule() {
         facade.stubIngress(ingressWithRule(NS, INGRESS_NAME, SERVICE, 8080));
-        resolver.onAdded(policy(NS, SERVICE, INGRESS_NAME));
+        resolver.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
 
         Optional<String> result = resolver.resolve(NS, SERVICE);
 
@@ -108,7 +108,7 @@ class TraefikServiceNameResolverTest {
     @Test
     void resolve_happyPath_defaultBackend() {
         facade.stubIngress(ingressWithDefaultBackend(NS, INGRESS_NAME, SERVICE, 3000));
-        resolver.onAdded(policy(NS, SERVICE, INGRESS_NAME));
+        resolver.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
 
         Optional<String> result = resolver.resolve(NS, SERVICE);
 
@@ -118,7 +118,7 @@ class TraefikServiceNameResolverTest {
     @Test
     void resolve_ingressNotFound_returnsEmpty() {
         // No ingress stubbed
-        resolver.onAdded(policy(NS, SERVICE, INGRESS_NAME));
+        resolver.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
 
         Optional<String> result = resolver.resolve(NS, SERVICE);
 
@@ -128,7 +128,7 @@ class TraefikServiceNameResolverTest {
     @Test
     void resolve_serviceNotInIngress_returnsEmpty() {
         facade.stubIngress(ingressWithRule(NS, INGRESS_NAME, "other-svc", 8080));
-        resolver.onAdded(policy(NS, SERVICE, INGRESS_NAME));
+        resolver.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
 
         Optional<String> result = resolver.resolve(NS, SERVICE);
 
@@ -148,7 +148,7 @@ class TraefikServiceNameResolverTest {
     @Test
     void resolve_resultIsCached_ingressFetchedOnce() {
         facade.stubIngress(ingressWithRule(NS, INGRESS_NAME, SERVICE, 8080));
-        resolver.onAdded(policy(NS, SERVICE, INGRESS_NAME));
+        resolver.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
 
         Optional<String> first = resolver.resolve(NS, SERVICE);
         // Remove the ingress — if cached, second call still returns the label
@@ -161,14 +161,14 @@ class TraefikServiceNameResolverTest {
     @Test
     void resolve_cacheInvalidatedOnPolicyUpdate() {
         facade.stubIngress(ingressWithRule(NS, INGRESS_NAME, SERVICE, 8080));
-        resolver.onAdded(policy(NS, SERVICE, INGRESS_NAME));
+        resolver.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
         Optional<String> before = resolver.resolve(NS, SERVICE);
         assertThat(before).contains("default-my-svc-8080@kubernetes");
 
         // Update: new ingress with different port
         String newIngressName = "new-ingress";
         facade.stubIngress(ingressWithRule(NS, newIngressName, SERVICE, 9090));
-        resolver.onUpdated(
+        resolver.onPolicyUpdated(
                 policy(NS, SERVICE, INGRESS_NAME),
                 policy(NS, SERVICE, newIngressName));
 
@@ -177,13 +177,13 @@ class TraefikServiceNameResolverTest {
     }
 
     @Test
-    void resolve_onDeleted_clearsCache() {
+    void resolve_onPolicyDeleted_clearsCache() {
         facade.stubIngress(ingressWithRule(NS, INGRESS_NAME, SERVICE, 8080));
         var p = policy(NS, SERVICE, INGRESS_NAME);
-        resolver.onAdded(p);
+        resolver.onPolicyAdded(p);
         resolver.resolve(NS, SERVICE); // populate cache
 
-        resolver.onDeleted(p);
+        resolver.onPolicyDeleted(p);
         facade.removeIngress(NS, INGRESS_NAME); // also remove ingress
 
         Optional<String> result = resolver.resolve(NS, SERVICE);
@@ -196,8 +196,8 @@ class TraefikServiceNameResolverTest {
         facade.stubIngress(ingressWithRule(NS, INGRESS_NAME, SERVICE, 8080));
         facade.stubIngress(ingressWithRule(ns2, INGRESS_NAME, SERVICE, 9090));
 
-        resolver.onAdded(policy(NS, SERVICE, INGRESS_NAME));
-        resolver.onAdded(policy(ns2, SERVICE, INGRESS_NAME));
+        resolver.onPolicyAdded(policy(NS, SERVICE, INGRESS_NAME));
+        resolver.onPolicyAdded(policy(ns2, SERVICE, INGRESS_NAME));
 
         assertThat(resolver.resolve(NS, SERVICE)).contains("default-my-svc-8080@kubernetes");
         assertThat(resolver.resolve(ns2, SERVICE)).contains("other-ns-my-svc-9090@kubernetes");

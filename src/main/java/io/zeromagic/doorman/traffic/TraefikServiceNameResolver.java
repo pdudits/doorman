@@ -64,20 +64,20 @@ class TraefikServiceNameResolver implements ScalingPolicyEvents {
     // ── ScalingPolicyEvents ───────────────────────────────────────────────────
 
     @Override
-    public void onAdded(ScalingPolicy policy) {
+    public void onPolicyAdded(ScalingPolicy policy) {
         String key = key(policy.getMetadata().getNamespace(), policy.getSpec().getServiceName());
         policyIndex.put(key, policy.getSpec().getIngressName());
     }
 
     @Override
-    public void onUpdated(ScalingPolicy oldPolicy, ScalingPolicy newPolicy) {
+    public void onPolicyUpdated(ScalingPolicy oldPolicy, ScalingPolicy newPolicy) {
         String key = key(newPolicy.getMetadata().getNamespace(), newPolicy.getSpec().getServiceName());
         policyIndex.put(key, newPolicy.getSpec().getIngressName());
         cache.remove(key);
     }
 
     @Override
-    public void onDeleted(ScalingPolicy policy) {
+    public void onPolicyDeleted(ScalingPolicy policy) {
         String key = key(policy.getMetadata().getNamespace(), policy.getSpec().getServiceName());
         policyIndex.remove(key);
         cache.remove(key);

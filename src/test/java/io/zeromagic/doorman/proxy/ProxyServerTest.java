@@ -141,7 +141,7 @@ class ProxyServerTest {
         var policy = new ScalingPolicy();
         policy.setMetadata(new ObjectMetaBuilder().withNamespace(NS).withName("my-policy").build());
         policy.setSpec(spec);
-        routeIndex.onAdded(policy);
+        routeIndex.onPolicyAdded(policy);
     }
 
     /** Adds a policy to the registry in ScaledDown state. */
@@ -185,7 +185,7 @@ class ProxyServerTest {
         // Service is already Running (readyReplicas=1) when onAdded fires
         registry = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(1, 1)));
         addRoute();
-        registry.onAdded(scaledDownPolicy()); // onAdded with reader returning ready → transitions to Running
+        registry.onPolicyAdded(scaledDownPolicy()); // onAdded with reader returning ready → transitions to Running
 
         int port = startServer(5_000);
         var resp = get(port, HOST, "/some/path?q=1");
@@ -198,7 +198,7 @@ class ProxyServerTest {
     void scaledDownService_returns307_after_future_completes() throws Exception {
         // Service starts in ScaledDown; another thread fires onDeploymentChanged to complete the future
         addRoute();
-        registry.onAdded(scaledDownPolicy());
+        registry.onPolicyAdded(scaledDownPolicy());
 
         int port = startServer(5_000);
 
@@ -223,7 +223,7 @@ class ProxyServerTest {
     void scaleUpTimeout_returns503() throws Exception {
         // Service starts ScaledDown; nothing completes the future within the 150ms timeout
         addRoute();
-        registry.onAdded(scaledDownPolicy());
+        registry.onPolicyAdded(scaledDownPolicy());
 
         int port = startServer(150); // very short timeout
         var resp = get(port, HOST, "/");
@@ -235,8 +235,8 @@ class ProxyServerTest {
     void awaitReady_fails_returns502() throws Exception {
         // onDeleted removes service from registry → awaitReady returns failedFuture
         addRoute();
-        registry.onAdded(scaledDownPolicy());
-        registry.onDeleted(scaledDownPolicy());
+        registry.onPolicyAdded(scaledDownPolicy());
+        registry.onPolicyDeleted(scaledDownPolicy());
 
         int port = startServer(5_000);
         var resp = get(port, HOST, "/");
@@ -249,7 +249,7 @@ class ProxyServerTest {
         // Running service with a 200ms propagation delay — response must take at least that long
         registry = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(1, 1)));
         addRoute();
-        registry.onAdded(scaledDownPolicy());
+        registry.onPolicyAdded(scaledDownPolicy());
 
         int port = startServer(5_000, 200);
         long start = System.currentTimeMillis();

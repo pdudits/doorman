@@ -47,7 +47,7 @@ class TraefikServiceNameResolverIT {
             var resolver = new TraefikServiceNameResolver(K3S.facade());
 
             // AC1 + AC2: resolve Traefik label from Ingress
-            resolver.onAdded(policy);
+            resolver.onPolicyAdded(policy);
             assertThat(resolver.resolve(ns, SERVICE))
                     .as("initial resolution")
                     .contains(ns + "-" + SERVICE + "-" + PORT + "@kubernetes");
@@ -61,14 +61,14 @@ class TraefikServiceNameResolverIT {
             // AC4: cache invalidated on policy update (new ingress with different port)
             createIngress(ns, INGRESS_NAME_V2, SERVICE, PORT_V2);
             var updatedPolicy = updateScalingPolicy(ns, policy, INGRESS_NAME_V2);
-            resolver.onUpdated(policy, updatedPolicy);
+            resolver.onPolicyUpdated(policy, updatedPolicy);
             assertThat(resolver.resolve(ns, SERVICE))
                     .as("resolution after policy update")
                     .contains(ns + "-" + SERVICE + "-" + PORT_V2 + "@kubernetes");
 
             // AC5: returns empty when ingress is missing after cache invalidation
             client.network().v1().ingresses().inNamespace(ns).withName(INGRESS_NAME_V2).delete();
-            resolver.onUpdated(updatedPolicy, updatedPolicy);
+            resolver.onPolicyUpdated(updatedPolicy, updatedPolicy);
             assertThat(resolver.resolve(ns, SERVICE))
                     .as("empty when ingress missing")
                     .isEmpty();

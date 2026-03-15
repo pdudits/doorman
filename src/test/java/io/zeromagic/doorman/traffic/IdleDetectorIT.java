@@ -91,8 +91,8 @@ class IdleDetectorIT {
 
         var policy = createScalingPolicy(ns);
         try {
-            resolver.onAdded(policy);
-            registry.onAdded(policy);
+            resolver.onPolicyAdded(policy);
+            registry.onPolicyAdded(policy);
 
             assertThat(registry.byServiceName(ns, SVC).orElseThrow().currentState())
                     .isInstanceOf(ServiceState.Running.class);

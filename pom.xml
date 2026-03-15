@@ -128,6 +128,7 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     <systemPropertyVariables>
                         <!-- Allow setting Host header in java.net.http.HttpClient for Traefik routing tests -->
                         <jdk.httpclient.allowRestrictedHeaders>host</jdk.httpclient.allowRestrictedHeaders>

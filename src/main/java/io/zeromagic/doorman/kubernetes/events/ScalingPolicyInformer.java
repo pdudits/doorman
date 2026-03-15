@@ -54,18 +54,18 @@ public class ScalingPolicyInformer implements ResourceEventHandler<ScalingPolicy
     @Override
     public void onAdd(ScalingPolicy obj) {
         LOG.info("ScalingPolicy ADDED: {}/{}", obj.getMetadata().getNamespace(), obj.getMetadata().getName());
-        listeners.forEach(l -> l.onAdded(obj));
+        listeners.forEach(l -> l.onPolicyAdded(obj));
     }
 
     @Override
     public void onUpdate(ScalingPolicy oldObj, ScalingPolicy newObj) {
         LOG.info("ScalingPolicy UPDATED: {}/{}", newObj.getMetadata().getNamespace(), newObj.getMetadata().getName());
-        listeners.forEach(l -> l.onUpdated(oldObj, newObj));
+        listeners.forEach(l -> l.onPolicyUpdated(oldObj, newObj));
     }
 
     @Override
     public void onDelete(ScalingPolicy obj, boolean deletedFinalStateUnknown) {
         LOG.info("ScalingPolicy DELETED: {}/{}", obj.getMetadata().getNamespace(), obj.getMetadata().getName());
-        listeners.forEach(l -> l.onDeleted(obj));
+        listeners.forEach(l -> l.onPolicyDeleted(obj));
     }
 }

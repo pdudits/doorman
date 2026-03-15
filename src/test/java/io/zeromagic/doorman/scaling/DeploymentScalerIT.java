@@ -86,7 +86,7 @@ class DeploymentScalerIT {
                     Duration.ofMinutes(5)
             );
 
-            registry.onAdded(policy);
+            registry.onPolicyAdded(policy);
             assertThat(registry.byServiceName(ns, SERVICE).orElseThrow().currentState())
                     .as("should start as Running")
                     .isInstanceOf(ServiceState.Running.class);

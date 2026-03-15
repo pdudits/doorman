@@ -145,7 +145,7 @@ class EndpointRegistrarIT {
                     reader,
                     Duration.ofMinutes(5));
 
-            registry.onAdded(policy);
+            registry.onPolicyAdded(policy);
             assertThat(registry.byServiceName(ns, SERVICE).orElseThrow().currentState())
                     .isInstanceOf(ServiceState.Running.class);
 

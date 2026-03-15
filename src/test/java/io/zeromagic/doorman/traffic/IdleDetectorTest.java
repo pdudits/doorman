@@ -177,8 +177,8 @@ class IdleDetectorTest {
                 TIMEOUT
         );
         var policy = policy(SVC, INGRESS, DEPLOY);
-        resolver.onAdded(policy);
-        stoppedRegistry.onAdded(policy);
+        resolver.onPolicyAdded(policy);
+        stoppedRegistry.onPolicyAdded(policy);
 
         var det = new IdleDetector(null, resolver, stoppedRegistry,
                 new TraefikConfig.Direct("http://fake", "5m", "15s"), clock);
@@ -199,8 +199,8 @@ class IdleDetectorTest {
 
         register(SVC);
         var policy2 = policy(svc2, "other-ingress", "other-dep");
-        resolver.onAdded(policy2);
-        registry.onAdded(policy2);
+        resolver.onPolicyAdded(policy2);
+        registry.onPolicyAdded(policy2);
 
         // Resolver that throws for SVC but works for svc2
         var throwingResolver = new TraefikServiceNameResolver(facade) {
@@ -211,8 +211,8 @@ class IdleDetectorTest {
             }
         };
         // Prime the throwingResolver's internal policy index for svc2
-        throwingResolver.onAdded(policy(SVC, INGRESS, DEPLOY));
-        throwingResolver.onAdded(policy2);
+        throwingResolver.onPolicyAdded(policy(SVC, INGRESS, DEPLOY));
+        throwingResolver.onPolicyAdded(policy2);
         var det = new IdleDetector(null, throwingResolver, registry,
                 new TraefikConfig.Direct("http://fake", "5m", "15s"), clock);
 
@@ -237,7 +237,7 @@ class IdleDetectorTest {
         var res = new TraefikServiceNameResolver(noIngressFacade);
         register(SVC);
         var policy = policy(SVC, INGRESS, DEPLOY);
-        res.onAdded(policy);
+        res.onPolicyAdded(policy);
 
         var det = new IdleDetector(null, res, registry,
                 new TraefikConfig.Direct("http://fake", "5m", "15s"), clock);
@@ -252,8 +252,8 @@ class IdleDetectorTest {
 
     private void register(String svc) {
         var pol = policy(svc, INGRESS, DEPLOY);
-        resolver.onAdded(pol);
-        registry.onAdded(pol);
+        resolver.onPolicyAdded(pol);
+        registry.onPolicyAdded(pol);
     }
 
     private void assertRunning(String svc) {

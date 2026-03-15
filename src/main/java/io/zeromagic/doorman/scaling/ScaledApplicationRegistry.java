@@ -91,7 +91,7 @@ public class ScaledApplicationRegistry
     // -------------------------------------------------------------------------
 
     @Override
-    public void onAdded(ScalingPolicy policy) {
+    public void onPolicyAdded(ScalingPolicy policy) {
         var meta = policy.getMetadata();
         var spec = policy.getSpec();
         var policyKey = policyKey(meta.getNamespace(), meta.getName());
@@ -124,7 +124,7 @@ public class ScaledApplicationRegistry
     }
 
     @Override
-    public void onUpdated(ScalingPolicy oldPolicy, ScalingPolicy newPolicy) {
+    public void onPolicyUpdated(ScalingPolicy oldPolicy, ScalingPolicy newPolicy) {
         var meta = newPolicy.getMetadata();
         var app = byPolicyKey.get(policyKey(meta.getNamespace(), meta.getName()));
         if (app == null) return;
@@ -150,7 +150,7 @@ public class ScaledApplicationRegistry
     }
 
     @Override
-    public void onDeleted(ScalingPolicy policy) {
+    public void onPolicyDeleted(ScalingPolicy policy) {
         var meta = policy.getMetadata();
         var policyKey = policyKey(meta.getNamespace(), meta.getName());
         var app = byPolicyKey.remove(policyKey);

@@ -63,18 +63,18 @@ public class IngressRouteIndex implements ScalingPolicyEvents {
     // ── ScalingPolicyEvents ───────────────────────────────────────────────────
 
     @Override
-    public void onAdded(ScalingPolicy policy) {
+    public void onPolicyAdded(ScalingPolicy policy) {
         index(policy);
     }
 
     @Override
-    public void onUpdated(ScalingPolicy oldPolicy, ScalingPolicy newPolicy) {
+    public void onPolicyUpdated(ScalingPolicy oldPolicy, ScalingPolicy newPolicy) {
         removePolicy(oldPolicy);
         index(newPolicy);
     }
 
     @Override
-    public void onDeleted(ScalingPolicy policy) {
+    public void onPolicyDeleted(ScalingPolicy policy) {
         removePolicy(policy);
     }
 
