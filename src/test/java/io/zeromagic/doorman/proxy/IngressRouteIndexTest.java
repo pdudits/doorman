@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.zeromagic.doorman.proxy;
 
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;

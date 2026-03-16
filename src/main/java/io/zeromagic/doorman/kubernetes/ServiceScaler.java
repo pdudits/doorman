@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.zeromagic.doorman.kubernetes;
 
 /** Triggers actual Kubernetes deployment scaling. Real impl in Task-008. */

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.zeromagic.doorman.e2e;
 
 import io.zeromagic.doorman.k3s.DoormanSystemHarness;

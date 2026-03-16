@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.zeromagic.doorman.kubernetes.events;
 
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
