@@ -4,6 +4,7 @@ title: 'Fix: ScaledDown to Running direct transition on manual scale-up'
 status: To Do
 assignee: []
 created_date: '2026-03-13 23:40'
+updated_date: '2026-03-16 15:21'
 labels:
   - bug
   - scaling
@@ -12,6 +13,7 @@ milestone: m-0
 dependencies: []
 parent_task_id: TASK-013
 priority: high
+ordinal: 7000
 ---
 
 ## Description

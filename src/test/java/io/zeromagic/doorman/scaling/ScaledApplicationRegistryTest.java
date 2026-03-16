@@ -20,7 +20,6 @@ import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import io.zeromagic.doorman.kubernetes.DeploymentStateReader;
-import io.zeromagic.doorman.kubernetes.EndpointRegistrar;
 import io.zeromagic.doorman.kubernetes.ServiceScaler;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyPhase;
@@ -230,61 +229,6 @@ class ScaledApplicationRegistryTest {
     }
 
     // -------------------------------------------------------------------------
-    // EndpointsEvents — real endpoints
-    // -------------------------------------------------------------------------
-
-    @Test
-    void onRealEndpointsDrained_scalingDownToScaledDown() {
-        registry.onPolicyAdded(policy("ns", "pol", "svc", "dep"));
-        registry.byServiceName("ns", "svc").orElseThrow()
-                .beginScalingDown();
-        patches.clear();
-
-        registry.onRealEndpointsDrained("ns", "svc");
-
-        assertThat(registry.byServiceName("ns", "svc").orElseThrow().currentState())
-                .isInstanceOf(ServiceState.ScaledDown.class);
-        assertThat(patches.get(0).phase()).isEqualTo(ScalingPolicyPhase.ScaledDown);
-    }
-
-    @Test
-    void onRealEndpointsDrained_ignoredForUnknownService() {
-        // must not throw
-        registry.onRealEndpointsDrained("ns", "unknown-svc");
-    }
-
-    // -------------------------------------------------------------------------
-    // EndpointsEvents — fight-back
-    // -------------------------------------------------------------------------
-
-    @Test
-    void onDoormanEndpointRemoved_fightBack_whenScaledDown() {
-        var reg = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(0, 0)));
-        reg.onPolicyAdded(policy("ns", "pol", "svc", "dep", ScalingPolicyPhase.ScaledDown, 3));
-        registerCalls.clear(); // onAdded already called register() for initial ScaledDown state
-        reg.onDoormanEndpointRemoved("ns", "svc");
-        assertThat(registerCalls).hasSize(1);
-        assertThat(registerCalls.get(0).service()).isEqualTo("svc");
-    }
-
-    @Test
-    void onDoormanEndpointRemoved_fightBack_whenScalingUp() {
-        var reg = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(0, 0)));
-        reg.onPolicyAdded(policy("ns", "pol", "svc", "dep", ScalingPolicyPhase.ScaledDown, 3));
-        reg.awaitReady("ns", "svc"); // → ScalingUp
-        registerCalls.clear();
-        reg.onDoormanEndpointRemoved("ns", "svc");
-        assertThat(registerCalls).hasSize(1);
-    }
-
-    @Test
-    void onDoormanEndpointRemoved_noFightBack_whenRunning() {
-        registry.onPolicyAdded(policy("ns", "pol", "svc", "dep"));
-        registry.onDoormanEndpointRemoved("ns", "svc");
-        assertThat(registerCalls).as("must not fight back when Running").isEmpty();
-    }
-
-    // -------------------------------------------------------------------------
     // awaitReady() — proxy entry point
     // -------------------------------------------------------------------------
 
@@ -338,39 +282,6 @@ class ScaledApplicationRegistryTest {
     void awaitReady_unknownService_returnsFailedFuture() {
         var future = registry.awaitReady("ns", "not-managed");
         assertThat(future).isCompletedExceptionally();
-    }
-
-    // -------------------------------------------------------------------------
-    // EndpointSliceEvents — renamed methods
-    // -------------------------------------------------------------------------
-
-    @Test
-    void onRealSlicesDrained_scalingDownToScaledDown() {
-        registry.onPolicyAdded(policy("ns", "pol", "svc", "dep"));
-        registry.byServiceName("ns", "svc").orElseThrow()
-                .beginScalingDown();
-        patches.clear();
-
-        registry.onRealSlicesDrained("ns", "svc");
-
-        assertThat(registry.byServiceName("ns", "svc").orElseThrow().currentState())
-                .isInstanceOf(ServiceState.ScaledDown.class);
-    }
-
-    @Test
-    void onDoormanSliceRemoved_fightBack_whenScaledDown() {
-        var reg = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(0, 0)));
-        reg.onPolicyAdded(policy("ns", "pol", "svc", "dep", ScalingPolicyPhase.ScaledDown, 3));
-        registerCalls.clear(); // onAdded already called register() for initial ScaledDown state
-        reg.onDoormanSliceRemoved("ns", "svc");
-        assertThat(registerCalls).hasSize(1);
-    }
-
-    @Test
-    void onDoormanSliceRemoved_noFightBack_whenRunning() {
-        registry.onPolicyAdded(policy("ns", "pol", "svc", "dep"));
-        registry.onDoormanSliceRemoved("ns", "svc");
-        assertThat(registerCalls).isEmpty();
     }
 
     // -------------------------------------------------------------------------
@@ -437,30 +348,6 @@ class ScaledApplicationRegistryTest {
     }
 
     @Test
-    void onRealEndpointsDrained_callsRegisterAfterConfirmScaledDown() {
-        registry.onPolicyAdded(policy("ns", "pol", "svc", "dep"));
-        registry.byServiceName("ns", "svc").orElseThrow().beginScalingDown();
-        registerCalls.clear();
-
-        registry.onRealEndpointsDrained("ns", "svc");
-
-        assertThat(registerCalls).hasSize(1);
-        assertThat(registerCalls.get(0)).isEqualTo(new RegisterCall("ns", "svc"));
-    }
-
-    @Test
-    void onRealSlicesDrained_callsRegisterAfterConfirmScaledDown() {
-        registry.onPolicyAdded(policy("ns", "pol", "svc", "dep"));
-        registry.byServiceName("ns", "svc").orElseThrow().beginScalingDown();
-        registerCalls.clear();
-
-        registry.onRealSlicesDrained("ns", "svc");
-
-        assertThat(registerCalls).hasSize(1);
-        assertThat(registerCalls.get(0)).isEqualTo(new RegisterCall("ns", "svc"));
-    }
-
-    @Test
     void onPolicyAdded_callsRegisterWhenInitialStateIsScaledDown() {
         var reg = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(0, 0)));
         reg.onPolicyAdded(policy("ns", "pol", "svc", "dep", ScalingPolicyPhase.ScaledDown, 3));
@@ -517,19 +404,5 @@ class ScaledApplicationRegistryTest {
         assertThat(future).isCompletedWithValue(null);
         assertThat(deregisterCalls).hasSize(1);
         assertThat(deregisterCalls.get(0)).isEqualTo(new RegisterCall("ns", "svc"));
-    }
-
-    @Test
-    void onDeploymentReady_deregisterCalledEvenIfAlreadyRunning() {
-        // Second deployment-ready event — confirmRunning returns false (already Running),
-        // but deregister is still called (idempotent cleanup)
-        var reg = registryWith((ns, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(0, 0)));
-        reg.onPolicyAdded(policy("ns", "pol", "svc", "dep", ScalingPolicyPhase.ScaledDown, 1));
-        reg.awaitReady("ns", "svc");
-        reg.onDeploymentChanged(deployment("ns", "dep", 1, 1)); // first ready event → Running
-        deregisterCalls.clear();
-
-        reg.onDeploymentChanged(deployment("ns", "dep", 1, 1)); // second ready event
-        assertThat(deregisterCalls).hasSize(1); // deregister still called
     }
 }

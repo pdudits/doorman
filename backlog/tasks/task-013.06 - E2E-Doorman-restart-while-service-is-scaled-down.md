@@ -4,6 +4,7 @@ title: 'E2E: Doorman restart while service is scaled down'
 status: To Do
 assignee: []
 created_date: '2026-03-13 23:40'
+updated_date: '2026-03-16 15:21'
 labels:
   - e2e
   - system-test
@@ -12,6 +13,7 @@ dependencies:
   - TASK-013.05
 parent_task_id: TASK-013
 priority: high
+ordinal: 8000
 ---
 
 ## Description

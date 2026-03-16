@@ -4,12 +4,14 @@ title: 'Demo guide and README: end-to-end walkthrough with local cluster'
 status: To Do
 assignee: []
 created_date: '2026-03-12 11:28'
+updated_date: '2026-03-16 15:21'
 labels:
   - documentation
   - demo
 milestone: m-0
 dependencies: []
 priority: low
+ordinal: 3000
 ---
 
 ## Description

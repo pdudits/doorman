@@ -109,8 +109,8 @@ public class DoormanSystemHarness implements BeforeAllCallback, AfterAllCallback
                 "--traefik-metrics-url",   ext.traefikMetricsUrl(),
                 "--idle-timeout",          idleTimeout,
                 "--metrics-poll-interval", pollInterval,
-                "--scale-up-timeout",      "30s",
-                "--propagation-delay",     "200ms"
+                "--scale-up-timeout",      "30s"
+                //"--propagation-delay",     "1200ms" // keep default propagation delay
         );
 
         scope = BeanScope.builder()
@@ -354,5 +354,9 @@ public class DoormanSystemHarness implements BeforeAllCallback, AfterAllCallback
         }
         // /etc/hosts format: "IP hostname [alias...]"
         return line.split("\\s+")[0];
+    }
+
+    public void reconciliationSleep() throws Exception {
+        Thread.sleep(scope.get(DoormanConfig.class).propagationDelay());
     }
 }

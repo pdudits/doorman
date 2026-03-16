@@ -45,7 +45,7 @@ import org.testcontainers.utility.DockerImageName;
  */
 public class K3sClusterExtension implements BeforeAllCallback, AfterAllCallback {
 
-    static final DockerImageName K3S_IMAGE = DockerImageName.parse("rancher/k3s:v1.31.5-k3s1");
+    static final DockerImageName K3S_IMAGE = DockerImageName.parse("rancher/k3s:v1.35.2-k3s1");
 
     private final String namespace;
 

@@ -4,6 +4,7 @@ title: 'Traefik v3 compatibility: run E2E suite against k3s v1.32+ with Traefik 
 status: To Do
 assignee: []
 created_date: '2026-03-13 23:41'
+updated_date: '2026-03-16 15:21'
 labels:
   - e2e
   - system-test
@@ -13,6 +14,7 @@ dependencies:
   - TASK-013.05
 parent_task_id: TASK-013
 priority: medium
+ordinal: 10000
 ---
 
 ## Description

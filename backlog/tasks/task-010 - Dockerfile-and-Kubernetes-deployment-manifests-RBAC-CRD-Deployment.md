@@ -4,6 +4,7 @@ title: 'Dockerfile and Kubernetes deployment manifests (RBAC, CRD, Deployment)'
 status: To Do
 assignee: []
 created_date: '2026-03-12 11:27'
+updated_date: '2026-03-16 15:21'
 labels:
   - deployment
   - docker
@@ -11,6 +12,7 @@ labels:
 milestone: m-0
 dependencies: []
 priority: medium
+ordinal: 2000
 ---
 
 ## Description

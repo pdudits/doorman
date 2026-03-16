@@ -78,7 +78,7 @@ class HappyPathE2EIT {
         HARNESS.awaitPodReady(ns, "app=" + appName, 120);
 
         // as much as I hate sleeps, it does take time for traefik to catch up.
-        Thread.sleep(Duration.ofMillis(250));
+        HARNESS.reconciliationSleep();
 
         // ── Phase 2: Baseline — initial traffic reaches echo ───────────────────
         LOG.info("=== Phase 2: Baseline — verifying initial GET returns 200 ===");
@@ -96,7 +96,9 @@ class HappyPathE2EIT {
         HARNESS.awaitScalingPolicyPhase(ns, policyName, ScalingPolicyPhase.ScaledDown, 60);
         HARNESS.awaitDeploymentReplicas(ns, appName, 0, 15);
         LOG.info("Echo deployment scaled to 0, Doorman registered as endpoint");
-        Thread.sleep(Duration.ofMillis(250));
+        // Unfortunately traefik is limiting the rate of change, and we must wait a second before we safely route to
+        // doorman only
+        HARNESS.reconciliationSleep();
         // ── Phase 4: Hold + scale-up — send request through Doorman ───────────
         // The request blocks in Doorman's proxy until the echo pod is ready.
         // Doorman automatically triggers scale-up when awaitReady() is called.

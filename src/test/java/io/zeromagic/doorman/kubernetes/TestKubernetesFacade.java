@@ -16,7 +16,9 @@
 
 package io.zeromagic.doorman.kubernetes;
 
+import io.fabric8.kubernetes.api.model.Endpoints;
 import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.discovery.v1.EndpointSlice;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyPhase;
@@ -65,8 +67,6 @@ public class TestKubernetesFacade implements KubernetesFacade {
 
     @Override public Optional<DeploymentState> read(String namespace, String deploymentName) { return Optional.empty(); }
     @Override public void patch(String namespace, String name, ScalingPolicyPhase phase, Integer targetReplicas, String message) {}
-    @Override public void register(String namespace, String serviceName) {}
-    @Override public void deregister(String namespace, String serviceName) {}
     @Override public void scaleUp(String namespace, String deploymentName, int targetReplicas) {}
     @Override public void scaleDown(String namespace, String deploymentName) {}
 
@@ -84,5 +84,35 @@ public class TestKubernetesFacade implements KubernetesFacade {
     @Override
     public Optional<Ingress> getIngress(String namespace, String name) {
         return Optional.ofNullable(ingresses.get(namespace + "/" + name));
+    }
+
+    @Override
+    public void addEndpointSubset(Endpoints newObj, String ip, int port) {
+
+    }
+
+    @Override
+    public void addEndpointSubset(String namespace, String serviceName, String ip, int port) {
+
+    }
+
+    @Override
+    public void removeEndpointSubset(String namespace, String serviceName, String ip, int port) {
+
+    }
+
+    @Override
+    public void addEndpointSlice(String namespace, String serviceName, String ip, int port) {
+
+    }
+
+    @Override
+    public void removeEndpointSlice(String namespace, String serviceName) {
+
+    }
+
+    @Override
+    public void addEndpointSlice(EndpointSlice obj) {
+
     }
 }

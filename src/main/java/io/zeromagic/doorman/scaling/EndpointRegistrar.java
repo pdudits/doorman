@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.zeromagic.doorman.kubernetes;
+package io.zeromagic.doorman.scaling;
 
 /**
  * Registers/deregisters Doorman's own IP as a service endpoint.

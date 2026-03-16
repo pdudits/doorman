@@ -20,7 +20,6 @@ import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import io.zeromagic.doorman.k3s.K3sClusterExtension;
 import io.zeromagic.doorman.kubernetes.DeploymentStateReader;
-import io.zeromagic.doorman.kubernetes.EndpointRegistrar;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyPhase;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicySpec;

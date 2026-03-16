@@ -5,10 +5,15 @@ metadata:
   namespace: kube-system
 spec:
   valuesContent: |-
+    providers:
+      kubernetesIngress: {} 
+        # allowEmptyServices: true
     logs:
       access:
         enabled: true
         format: json
+      general:
+        level: DEBUG
       level: DEBUG
     metrics:
       prometheus:

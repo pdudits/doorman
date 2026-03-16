@@ -105,12 +105,17 @@ public class ProxyServer {
             String path = exchange.getRequestURI().getPath();
 
             Optional<RouteTarget> route = routeIndex.resolve(host, path);
+            LOG.debug("Route lookup: host='{}' (from header '{}') path='{}' → {}",
+                    host, hostHeader, path, route.map(r -> r.namespace() + "/" + r.serviceName()).orElse("NOT FOUND"));
             if (route.isEmpty()) {
                 respond(exchange, 404, "Not Found");
                 return;
             }
 
             var target = route.get();
+            LOG.debug("Parking request {} {} → {}/{}", exchange.getRequestMethod(), path,
+                    target.namespace(), target.serviceName());
+            exchange.getResponseHeaders().set("Server", "Doorman");
             var future = registry.awaitReady(target.namespace(), target.serviceName());
             try {
                 future.get(config.scaleUpTimeout().toMillis(), TimeUnit.MILLISECONDS);
@@ -119,6 +124,7 @@ public class ProxyServer {
                 Thread.sleep(config.propagationDelay().toMillis());
                 String location = buildLocation(exchange, hostHeader);
                 exchange.getResponseHeaders().set("Location", location);
+                LOG.debug("Redirecting {} {} → 307 {}", exchange.getRequestMethod(), path, location);
                 respond(exchange, 307, "");
             } catch (TimeoutException e) {
                 LOG.warn("Scale-up timeout for {}/{}", target.namespace(), target.serviceName());

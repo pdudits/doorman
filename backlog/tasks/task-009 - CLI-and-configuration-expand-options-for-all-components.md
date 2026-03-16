@@ -4,13 +4,14 @@ title: 'CLI and configuration: expand options for all components'
 status: To Do
 assignee: []
 created_date: '2026-03-12 11:27'
-updated_date: '2026-03-12 11:33'
+updated_date: '2026-03-16 15:21'
 labels:
   - cli
   - configuration
 milestone: m-0
 dependencies: []
 priority: medium
+ordinal: 1000
 ---
 
 ## Description

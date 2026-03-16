@@ -98,7 +98,7 @@ public class ScaledApplication {
         return cas(
                 s -> s instanceof ServiceState.Running,
                 s -> new ServiceState.ScalingDown()
-        );
+        ).preconditionMatched();
     }
 
     /**
@@ -110,7 +110,7 @@ public class ScaledApplication {
         return cas(
                 s -> s instanceof ServiceState.ScalingDown,
                 s -> new ServiceState.ScaledDown(new CompletableFuture<>())
-        );
+        ).preconditionMatched();
     }
 
     /**
@@ -151,17 +151,9 @@ public class ScaledApplication {
      * Returns true if the transition happened.
      */
     public boolean confirmRunning() {
-        ServiceState old;
-        ServiceState next;
-        do {
-            old = state.get();
-            next = switch (old) {
-                case ServiceState.ScalingUp ignored -> new ServiceState.Running();
-                default -> old;
-            };
-        } while (!state.compareAndSet(old, next));
+        var result = cas(ServiceState.ScalingUp.class::isInstance, (x) -> new ServiceState.Running());
 
-        if (old instanceof ServiceState.ScalingUp(var future)) {
+        if (result.previous() instanceof ServiceState.ScalingUp(var future)) {
             LOG.info("{}/{}: ScalingUp → Running", snapshot.namespace(), snapshot.policyName());
             future.complete(null);
             return true;
@@ -186,18 +178,20 @@ public class ScaledApplication {
     // -------------------------------------------------------------------------
 
     /** CAS helper: apply {@code fn} only when {@code guard} holds for current state. */
-    private boolean cas(java.util.function.Predicate<ServiceState> guard,
+    private  CasResult cas(java.util.function.Predicate<ServiceState> guard,
                         UnaryOperator<ServiceState> fn) {
         ServiceState old;
         ServiceState next;
         do {
             old = state.get();
-            if (!guard.test(old)) return false;
+            if (!guard.test(old)) return new CasResult(false, old, old);
             next = fn.apply(old);
         } while (!state.compareAndSet(old, next));
         LOG.info("{}/{}: {} → {}", snapshot.namespace(), snapshot.policyName(),
                 old.getClass().getSimpleName(), next.getClass().getSimpleName());
-        return true;
+        return new  CasResult(true, old, next);
     }
+
+    record CasResult(boolean preconditionMatched, ServiceState previous, ServiceState curret) {}
 }
 

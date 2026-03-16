@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.zeromagic.doorman.scaling;
+package io.zeromagic.doorman.proxy;
 
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
@@ -22,10 +22,16 @@ import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import io.zeromagic.doorman.cli.DoormanConfig;
 import io.zeromagic.doorman.k3s.K3sClusterExtension;
 import io.zeromagic.doorman.kubernetes.DeploymentStateReader;
+import io.zeromagic.doorman.kubernetes.KubernetesFacade;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyPhase;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicySpec;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyStatus;
+import io.zeromagic.doorman.scaling.EndpointRegistrar;
+import io.zeromagic.doorman.scaling.ScaledApplicationRegistry;
+import io.zeromagic.doorman.scaling.ServiceState;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -54,15 +60,31 @@ class EndpointRegistrarIT {
 
     @RegisterExtension
     static final K3sClusterExtension K3S = new K3sClusterExtension("doorman-registrar-it");
+    private String ns;
+    private KubernetesFacade facade;
+    private ProxyEndpointHandler registrar;
+
+    @BeforeEach
+    void setUp() {
+        this.ns     = K3S.namespace();
+        this.facade = K3S.facade(DOORMAN_CONFIG);
+        this.registrar = new ProxyEndpointHandler(facade, new DoormanConfig(DOORMAN_IP, PROXY_PORT, Duration.ofSeconds(60), Duration.ofMillis(50)));
+        registrar.watch();
+        createService(ns);
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        if (registrar != null) {
+            registrar.close();;
+        }
+    }
 
     @Test
     void register_addsEndpointSliceAndClassicEndpoints() {
-        var ns     = K3S.namespace();
-        var facade = K3S.facade(DOORMAN_CONFIG);
-        createService(ns);
 
         try {
-            facade.register(ns, SERVICE);
+            registrar.register(ns, SERVICE);
 
             // Doorman EndpointSlice must exist and contain Doorman IP
             var slices = K3S.client().discovery().v1().endpointSlices()
@@ -84,7 +106,7 @@ class EndpointRegistrarIT {
             assertThat(doormanInEp).as("Doorman IP must be in classic Endpoints").isTrue();
 
             // Idempotency: second register() must not duplicate entries
-            facade.register(ns, SERVICE);
+            registrar.register(ns, SERVICE);
             var slicesAfter = K3S.client().discovery().v1().endpointSlices()
                     .inNamespace(ns).withLabel("kubernetes.io/service-name", SERVICE).list().getItems();
             long count = slicesAfter.stream()
@@ -101,13 +123,10 @@ class EndpointRegistrarIT {
 
     @Test
     void deregister_removesEndpointSlice() {
-        var ns     = K3S.namespace();
-        var facade = K3S.facade(DOORMAN_CONFIG);
-        createService(ns);
 
         try {
-            facade.register(ns, SERVICE);
-            facade.deregister(ns, SERVICE);
+            registrar.register(ns, SERVICE);
+            registrar.deregister(ns, SERVICE);
 
             var doormanSlice = K3S.client().discovery().v1().endpointSlices()
                     .inNamespace(ns).withName("doorman-" + SERVICE).get();
@@ -123,62 +142,6 @@ class EndpointRegistrarIT {
             }
         } finally {
             safeDelete(ns, facade);
-        }
-    }
-
-    @Test
-    void registry_callsRegisterAfterScaledDownTransition() {
-        var ns     = K3S.namespace();
-        var facade = K3S.facade(DOORMAN_CONFIG);
-        createService(ns);
-        createDeployment(ns);
-        var policy = createScalingPolicy(ns);
-
-        try {
-            DeploymentStateReader reader =
-                    (namespace, dep) -> Optional.of(new DeploymentStateReader.DeploymentState(2, 2));
-
-            var registry = new ScaledApplicationRegistry(
-                    facade,   // ScalingPolicyStatusPatcher
-                    facade,   // ServiceScaler
-                    facade,   // EndpointRegistrar (real — will register Doorman IP)
-                    reader,
-                    Duration.ofMinutes(5));
-
-            registry.onPolicyAdded(policy);
-            assertThat(registry.byServiceName(ns, SERVICE).orElseThrow().currentState())
-                    .isInstanceOf(ServiceState.Running.class);
-
-            // ScalingDown → confirmScaledDown via endpoint-drain event
-            registry.byServiceName(ns, SERVICE).orElseThrow().beginScalingDown();
-            registry.onRealEndpointsDrained(ns, SERVICE);
-
-            assertThat(registry.byServiceName(ns, SERVICE).orElseThrow().currentState())
-                    .as("state must be ScaledDown after endpoint drain")
-                    .isInstanceOf(ServiceState.ScaledDown.class);
-
-            // ScalingPolicy status patched to ScaledDown
-            var updated = K3S.client().resources(ScalingPolicy.class)
-                    .inNamespace(ns).withName(POLICY).get();
-            assertThat(updated.getStatus().getPhase())
-                    .isEqualTo(ScalingPolicyPhase.ScaledDown);
-
-            // Doorman IP must be registered in EndpointSlice
-            var slices = K3S.client().discovery().v1().endpointSlices()
-                    .inNamespace(ns).withLabel("kubernetes.io/service-name", SERVICE).list().getItems();
-            boolean doormanInSlice = slices.stream()
-                    .filter(s -> s.getEndpoints() != null)
-                    .flatMap(s -> s.getEndpoints().stream())
-                    .flatMap(e -> e.getAddresses() != null ? e.getAddresses().stream() : java.util.stream.Stream.empty())
-                    .anyMatch(DOORMAN_IP::equals);
-            assertThat(doormanInSlice).as("Doorman IP must be in EndpointSlice after ScaledDown").isTrue();
-
-        } finally {
-            safeDelete(ns, facade);
-            try { K3S.client().resources(ScalingPolicy.class).inNamespace(ns).withName(POLICY).delete(); }
-            catch (Exception ignored) {}
-            try { K3S.client().apps().deployments().inNamespace(ns).withName(DEPLOY).delete(); }
-            catch (Exception ignored) {}
         }
     }
 
@@ -228,7 +191,7 @@ class EndpointRegistrarIT {
     }
 
     private void safeDelete(String ns, io.zeromagic.doorman.kubernetes.KubernetesFacade facade) {
-        try { facade.deregister(ns, SERVICE); } catch (Exception ignored) {}
+        try { registrar.deregister(ns, SERVICE); } catch (Exception ignored) {}
         try { K3S.client().services().inNamespace(ns).withName(SERVICE).delete(); } catch (Exception ignored) {}
     }
 }

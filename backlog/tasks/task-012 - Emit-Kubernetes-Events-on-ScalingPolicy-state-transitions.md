@@ -4,12 +4,14 @@ title: Emit Kubernetes Events on ScalingPolicy state transitions
 status: To Do
 assignee: []
 created_date: '2026-03-12 14:41'
+updated_date: '2026-03-16 15:21'
 labels:
   - kubernetes
   - observability
 milestone: m-0
 dependencies: []
 priority: low
+ordinal: 4000
 ---
 
 ## Description

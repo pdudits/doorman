@@ -4,6 +4,7 @@ title: Full end-to-end system test suite with live Traefik in k3s
 status: To Do
 assignee: []
 created_date: '2026-03-13 23:37'
+updated_date: '2026-03-16 15:21'
 labels:
   - system-test
   - e2e
@@ -12,6 +13,7 @@ labels:
 milestone: m-0
 dependencies: []
 priority: high
+ordinal: 5000
 ---
 
 ## Description

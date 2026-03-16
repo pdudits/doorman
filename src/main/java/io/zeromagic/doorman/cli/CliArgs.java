@@ -69,6 +69,6 @@ public class CliArgs {
 
     @CommandLine.Option(names = "--propagation-delay",
             description = "How long to wait after scale-up before redirecting clients, to allow the ingress controller to propagate endpoint changes (default: 50ms).",
-            defaultValue = "50ms")
-    String propagationDelay = "50ms";
+            defaultValue = "2s")
+    String propagationDelay = "2s";
 }

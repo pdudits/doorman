@@ -20,15 +20,12 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.zeromagic.doorman.cli.DurationParser;
 import io.zeromagic.doorman.cli.TraefikConfig;
 import io.zeromagic.doorman.kubernetes.DeploymentStateReader;
-import io.zeromagic.doorman.kubernetes.EndpointRegistrar;
 import io.zeromagic.doorman.kubernetes.ScalingPolicyStatusPatcher;
 import io.zeromagic.doorman.kubernetes.ServiceScaler;
-import io.zeromagic.doorman.kubernetes.events.DeploymentEvents;
-import io.zeromagic.doorman.kubernetes.events.EndpointSliceEvents;
-import io.zeromagic.doorman.kubernetes.events.EndpointsEvents;
-import io.zeromagic.doorman.kubernetes.events.ScalingPolicyEvents;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyPhase;
+import io.zeromagic.doorman.kubernetes.events.DeploymentEvents;
+import io.zeromagic.doorman.kubernetes.events.ScalingPolicyEvents;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,19 +39,23 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Central registry of all managed applications. Implements all four watcher
  * event interfaces and delegates state transitions to {@link ScaledApplication}.
- * After each transition this class calls the appropriate side-effect interface:
+ * After each transition this class calls the appro\priate side-effect interface:
  * {@link ScalingPolicyStatusPatcher}, {@link ServiceScaler}, or {@link EndpointRegistrar}.
  */
 @Singleton
 public class ScaledApplicationRegistry
-        implements ScalingPolicyEvents, DeploymentEvents, EndpointsEvents, EndpointSliceEvents {
+        implements ScalingPolicyEvents, DeploymentEvents {
 
     private static final Logger LOG = LoggerFactory.getLogger(ScaledApplicationRegistry.class);
 
     private final ConcurrentHashMap<String, ScaledApplication> byPolicyKey = new ConcurrentHashMap<>();
-    /** namespace/deploymentName → policyKey */
+    /**
+     * namespace/deploymentName → policyKey
+     */
     private final ConcurrentHashMap<String, String> deploymentIndex = new ConcurrentHashMap<>();
-    /** namespace/serviceName → policyKey */
+    /**
+     * namespace/serviceName → policyKey
+     */
     private final ConcurrentHashMap<String, String> serviceIndex = new ConcurrentHashMap<>();
 
     private final ScalingPolicyStatusPatcher statusPatcher;
@@ -65,20 +66,22 @@ public class ScaledApplicationRegistry
 
     @jakarta.inject.Inject
     public ScaledApplicationRegistry(ScalingPolicyStatusPatcher statusPatcher,
-                                      ServiceScaler scaler,
-                                      EndpointRegistrar registrar,
-                                      DeploymentStateReader deploymentReader,
-                                      TraefikConfig traefikConfig) {
+                                     ServiceScaler scaler,
+                                     EndpointRegistrar registrar,
+                                     DeploymentStateReader deploymentReader,
+                                     TraefikConfig traefikConfig) {
         this(statusPatcher, scaler, registrar, deploymentReader,
                 DurationParser.parse(traefikConfig.idleTimeout()));
     }
 
-    /** Test constructor — accepts a pre-parsed global idle timeout. */
+    /**
+     * Test constructor — accepts a pre-parsed global idle timeout.
+     */
     public ScaledApplicationRegistry(ScalingPolicyStatusPatcher statusPatcher,
-                                      ServiceScaler scaler,
-                                      EndpointRegistrar registrar,
-                                      DeploymentStateReader deploymentReader,
-                                      Duration globalIdleTimeout) {
+                                     ServiceScaler scaler,
+                                     EndpointRegistrar registrar,
+                                     DeploymentStateReader deploymentReader,
+                                     Duration globalIdleTimeout) {
         this.statusPatcher = statusPatcher;
         this.scaler = scaler;
         this.registrar = registrar;
@@ -183,72 +186,17 @@ public class ScaledApplicationRegistry
                 registrar.register(snap.namespace(), snap.serviceName());
             }
         } else if (ready >= 1) {
+            // Only deregister Doorman and confirm running during scale-up.
+            // During ScalingDown an intermediate deployment event (pod still running) must
+            // not undo the Doorman endpoint that was registered in beginScalingDown.
             var snap = app.snapshot();
-            registrar.deregister(snap.namespace(), snap.serviceName());
-            if (app.confirmRunning()) {
-                patchStatus(app);
+            if (app.currentState() instanceof ServiceState.ScalingUp) {
+                if (app.confirmRunning()) {
+                    registrar.deregister(snap.namespace(), snap.serviceName());
+                    patchStatus(app);
+                }
             }
         }
-    }
-
-    // -------------------------------------------------------------------------
-    // EndpointsEvents (classic Endpoints API — Traefik v2)
-    // -------------------------------------------------------------------------
-
-    @Override
-    public void onRealEndpointsDrained(String namespace, String serviceName) {
-        withApp(serviceKey(namespace, serviceName), app -> {
-            if (app.confirmScaledDown()) {
-                patchStatus(app);
-                registrar.register(namespace, serviceName);
-            }
-        });
-    }
-
-    @Override
-    public void onDoormanEndpointRemoved(String namespace, String serviceName) {
-        withApp(serviceKey(namespace, serviceName), app -> {
-            switch (app.currentState()) {
-                case ServiceState.ScaledDown ignored -> registrar.register(namespace, serviceName);
-                case ServiceState.ScalingUp ignored -> registrar.register(namespace, serviceName);
-                default -> {} // not our fight to pick right now
-            }
-        });
-    }
-
-    @Override
-    public void onRealEndpointsReady(String namespace, String serviceName) {
-        LOG.debug("Real endpoints ready for {}/{} (deployment event will confirm)", namespace, serviceName);
-    }
-
-    // EndpointSliceEvents (Traefik v3+) has distinct method names ("Slice" suffix)
-    // but the same coordination logic. The actual fight-back K8s operations differ
-    // at the EndpointRegistrar implementation level (Task-006).
-
-    @Override
-    public void onRealSlicesDrained(String namespace, String serviceName) {
-        withApp(serviceKey(namespace, serviceName), app -> {
-            if (app.confirmScaledDown()) {
-                patchStatus(app);
-                registrar.register(namespace, serviceName);
-            }
-        });
-    }
-
-    @Override
-    public void onDoormanSliceRemoved(String namespace, String serviceName) {
-        withApp(serviceKey(namespace, serviceName), app -> {
-            switch (app.currentState()) {
-                case ServiceState.ScaledDown ignored -> registrar.register(namespace, serviceName);
-                case ServiceState.ScalingUp ignored -> registrar.register(namespace, serviceName);
-                default -> {}
-            }
-        });
-    }
-
-    @Override
-    public void onRealSlicesReady(String namespace, String serviceName) {
-        LOG.debug("Real endpoint slices ready for {}/{} (deployment event will confirm)", namespace, serviceName);
     }
 
     // -------------------------------------------------------------------------
@@ -293,6 +241,10 @@ public class ScaledApplicationRegistry
             if (app.beginScalingDown()) {
                 patchStatus(app);
                 var snap = app.snapshot();
+                // Register Doorman as endpoint BEFORE scaling down so Traefik picks it up
+                // before the real pod disappears — eliminates the propagation-delay window
+                // where Traefik has no backend at all.
+                registrar.register(snap.namespace(), snap.serviceName());
                 scaler.scaleDown(snap.namespace(), snap.deploymentName());
             }
         }, () -> LOG.warn("beginScalingDown called for unmanaged service {}/{}", namespace, serviceName));
@@ -322,7 +274,8 @@ public class ScaledApplicationRegistry
     }
 
     private void withApp(String indexKey, java.util.function.Consumer<ScaledApplication> action) {
-        withApp(indexKey, action, () -> {});
+        withApp(indexKey, action, () -> {
+        });
     }
 
     private void withApp(String indexKey, java.util.function.Consumer<ScaledApplication> action, Runnable notFound) {
@@ -352,9 +305,17 @@ public class ScaledApplicationRegistry
         };
     }
 
-    private static String policyKey(String namespace, String name) { return namespace + "/" + name; }
-    private static String deploymentKey(String namespace, String name) { return namespace + "/" + name; }
-    private static String serviceKey(String namespace, String name) { return namespace + "/" + name; }
+    private static String policyKey(String namespace, String name) {
+        return namespace + "/" + name;
+    }
+
+    private static String deploymentKey(String namespace, String name) {
+        return namespace + "/" + name;
+    }
+
+    private static String serviceKey(String namespace, String name) {
+        return namespace + "/" + name;
+    }
 
     private static ServiceState determineInitialState(
             Optional<DeploymentStateReader.DeploymentState> deployState,

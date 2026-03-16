@@ -21,7 +21,7 @@ import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
 import io.zeromagic.doorman.cli.TraefikConfig;
 import io.zeromagic.doorman.k3s.K3sClusterExtension;
 import io.zeromagic.doorman.kubernetes.DeploymentStateReader;
-import io.zeromagic.doorman.kubernetes.EndpointRegistrar;
+import io.zeromagic.doorman.scaling.EndpointRegistrar;
 import io.zeromagic.doorman.kubernetes.ServiceScaler;
 import io.zeromagic.doorman.scaling.ScaledApplicationRegistry;
 import io.zeromagic.doorman.scaling.ServiceState;

@@ -16,7 +16,9 @@
 
 package io.zeromagic.doorman.kubernetes;
 
+import io.fabric8.kubernetes.api.model.Endpoints;
 import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.discovery.v1.EndpointSlice;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 
@@ -26,7 +28,7 @@ import java.util.Optional;
  * Single interface to all Kubernetes operations needed by Doorman.
  * The production implementation is {@link KubernetesClientFacade}.
  */
-public interface KubernetesFacade extends EndpointRegistrar, DeploymentStateReader, ScalingPolicyStatusPatcher, ServiceScaler {
+public interface KubernetesFacade extends DeploymentStateReader, ScalingPolicyStatusPatcher, ServiceScaler {
 
     /** Watch resources of the given type, optionally scoped to namespace and/or label selector. */
     <T extends HasMetadata> AutoCloseable inform(
@@ -40,4 +42,16 @@ public interface KubernetesFacade extends EndpointRegistrar, DeploymentStateRead
 
     /** Fetch an Ingress resource by namespace and name. Returns empty if not found. */
     Optional<Ingress> getIngress(String namespace, String name);
+
+    void addEndpointSubset(Endpoints newObj, String ip, int port);
+
+    void addEndpointSubset(String namespace, String serviceName, String ip, int port);
+
+    void removeEndpointSubset(String namespace, String serviceName, String ip, int port);
+
+    void addEndpointSlice(String namespace, String serviceName, String ip, int port);
+
+    void removeEndpointSlice(String namespace, String serviceName);
+
+    void addEndpointSlice(EndpointSlice obj);
 }
