@@ -299,7 +299,7 @@ public class DoormanSystemHarness implements BeforeAllCallback, AfterAllCallback
             var policy = ext.client().resources(ScalingPolicy.class)
                     .inNamespace(namespace).withName(name).get();
             ScalingPolicyStatus status = policy == null ? null : policy.getStatus();
-            if (status != null && expectedPhase.name().equals(status.getPhase())) return;
+            if (status != null && expectedPhase.equals(status.getPhase())) return;
             Thread.sleep(1_000);
         }
         throw new AssertionError("ScalingPolicy '" + name + "' did not reach phase "
@@ -313,6 +313,21 @@ public class DoormanSystemHarness implements BeforeAllCallback, AfterAllCallback
         if (dep == null || dep.getSpec() == null) return -1;
         Integer r = dep.getSpec().getReplicas();
         return r == null ? 1 : r;
+    }
+
+    /**
+     * Waits until {@code spec.replicas} for the named Deployment equals {@code expected},
+     * or throws after {@code timeoutSeconds}.
+     */
+    public void awaitDeploymentReplicas(String namespace, String deploymentName,
+                                        int expected, int timeoutSeconds) throws InterruptedException {
+        Instant deadline = Instant.now().plusSeconds(timeoutSeconds);
+        while (Instant.now().isBefore(deadline)) {
+            if (getCurrentReplicas(namespace, deploymentName) == expected) return;
+            Thread.sleep(500);
+        }
+        throw new AssertionError("Deployment '" + deploymentName + "' spec.replicas did not reach "
+                + expected + " within " + timeoutSeconds + "s");
     }
 
     // -------------------------------------------------------------------------

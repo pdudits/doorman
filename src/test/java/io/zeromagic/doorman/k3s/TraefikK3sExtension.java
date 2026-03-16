@@ -17,13 +17,21 @@
 package io.zeromagic.doorman.k3s;
 
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.client.dsl.LogWatch;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.k3s.K3sContainer;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.time.Instant;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * JUnit 5 extension that extends {@link K3sClusterExtension} with Traefik support:
@@ -45,6 +53,7 @@ import java.time.Instant;
 public class TraefikK3sExtension extends K3sClusterExtension {
 
     private static final Logger LOG = LoggerFactory.getLogger(TraefikK3sExtension.class);
+    private static final Logger K3S = LoggerFactory.getLogger("k3s");
 
     public TraefikK3sExtension(String namespace) {
         super(namespace);
@@ -53,12 +62,12 @@ public class TraefikK3sExtension extends K3sClusterExtension {
     @Override
     protected void configureContainer(K3sContainer container) {
         // K3sContainer defaults to --disable=traefik; override command to enable it
-        container.setCommand("server", "--tls-san=" + container.getHost());
+        container.setCommand("server", "--tls-san=" + container.getHost()/*, "--debug"*/);
         // addExposedPort appends to K3sContainer's existing list (6443, 8443)
         container.addExposedPort(80);
         container.addExposedPort(9100);
         // Forward k3s container logs to SLF4J for post-failure forensics
-        container.withLogConsumer(new Slf4jLogConsumer(LOG).withPrefix("k3s"));
+        container.withLogConsumer(new Slf4jLogConsumer(K3S));
     }
 
     @Override
@@ -104,6 +113,8 @@ public class TraefikK3sExtension extends K3sClusterExtension {
                         traefikPods.stream().map(p -> p.getMetadata().getName()).toList(), allReady);
                 if (allReady) {
                     LOG.info("Traefik is ready");
+                    // watch traefik logs
+                    traefikPods.forEach(this::watchLog);
                     return;
                 }
             } else {
@@ -114,6 +125,26 @@ public class TraefikK3sExtension extends K3sClusterExtension {
             Thread.sleep(5_000);
         }
         throw new IllegalStateException("Traefik did not become ready within 240s");
+    }
+
+    private void watchLog(Pod pod) {
+        var name = pod.getMetadata().getName();
+        Thread.ofVirtual().name("log-"+ name).start(() -> pumpLog(name, client().pods().resource(pod).watchLog()));
+    }
+
+    private void pumpLog(String name, LogWatch logWatch) {
+        var logger = LoggerFactory.getLogger(K3S + "." + name);
+        try (var isr = new InputStreamReader(logWatch.getOutput());
+             var buffer = new BufferedReader(isr)){
+            for (;;) {
+                var line = buffer.readLine();
+                if (line == null) break;
+                logger.info(line);
+            }
+            logger.info("Log stream finished");
+        } catch (IOException ioe) {
+            LOG.debug("Reading log ended with exception", ioe);
+        }
     }
 
     private boolean isPodReady(Pod pod) {
