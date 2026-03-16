@@ -10,6 +10,22 @@
 
     <name>doorman</name>
     <description>Scale to Zero controller</description>
+    <url>https://github.com/pdudits/doorman</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>pdudits</id>
+            <name>Patrik Dudits</name>
+        </developer>
+    </developers>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
