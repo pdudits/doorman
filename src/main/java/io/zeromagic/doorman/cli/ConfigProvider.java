@@ -18,36 +18,51 @@ package io.zeromagic.doorman.cli;
 import io.avaje.inject.Bean;
 import io.avaje.inject.External;
 import io.avaje.inject.Factory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 
 @Factory
 class ConfigProvider {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigProvider.class);
+
     @Bean
     Optional<KubernetesConfig> kubernetesConfig(@External CliArgs args) {
-        return Optional.ofNullable(args.kubeContext).map(KubernetesConfig.Context::new);
+        var ctx = args.kubeContext;
+        return (ctx != null && !ctx.isBlank()) ? Optional.of(new KubernetesConfig.Context(ctx)) : Optional.empty();
     }
 
     @Bean
     DoormanConfig doormanConfig(@External CliArgs args) {
-        String ip = args.podIp != null ? args.podIp : System.getenv("POD_IP");
+        String ip = args.podIp;
         if (ip == null || ip.isBlank()) {
             throw new IllegalStateException(
                     "Doorman pod IP is not configured. Set --pod-ip or expose POD_IP via the Downward API.");
         }
-        return new DoormanConfig(ip, args.proxyPort, DurationParser.parse(args.scaleUpTimeout), DurationParser.parse(args.propagationDelay));
+        var config = new DoormanConfig(ip, args.proxyPort, DurationParser.parse(args.scaleUpTimeout), DurationParser.parse(args.propagationDelay));
+        LOGGER.info("Doorman config: podIp={}, proxyPort={}, scaleUpTimeout={}, propagationDelay={}",
+                config.podIp(), config.proxyPort(), config.scaleUpTimeout(), config.propagationDelay());
+        return config;
     }
 
     @Bean
     TraefikConfig traefikConfig(@External CliArgs args) {
         if (args.traefikMetricsUrl != null && !args.traefikMetricsUrl.isBlank()) {
-            return new TraefikConfig.Direct(args.traefikMetricsUrl, args.idleTimeout, args.metricsPollInterval);
+            var config = new TraefikConfig.Direct(args.traefikMetricsUrl, args.idleTimeout, args.metricsPollInterval);
+            LOGGER.info("Traefik config: direct url={}, idleTimeout={}, pollInterval={}",
+                    args.traefikMetricsUrl, args.idleTimeout, args.metricsPollInterval);
+            return config;
         }
         if (args.traefikNamespace != null && !args.traefikNamespace.isBlank()
                 && args.traefikLabelSelector != null && !args.traefikLabelSelector.isBlank()) {
-            return new TraefikConfig.Discovered(
+            var config = new TraefikConfig.Discovered(
                     args.traefikNamespace, args.traefikLabelSelector, args.traefikMetricsPort,
                     args.idleTimeout, args.metricsPollInterval);
+            LOGGER.info("Traefik config: discovered namespace={}, selector={}, port={}, idleTimeout={}, pollInterval={}",
+                    args.traefikNamespace, args.traefikLabelSelector, args.traefikMetricsPort,
+                    args.idleTimeout, args.metricsPollInterval);
+            return config;
         }
         throw new IllegalStateException(
                 "Traefik metrics source is not configured. " +
