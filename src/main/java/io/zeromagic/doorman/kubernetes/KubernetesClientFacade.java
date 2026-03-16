@@ -20,6 +20,9 @@ import io.fabric8.kubernetes.api.model.Endpoints;
 import io.fabric8.kubernetes.api.model.EndpointsBuilder;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.api.model.OwnerReference;
+import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
+import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.discovery.v1.EndpointSlice;
 import io.fabric8.kubernetes.api.model.discovery.v1.EndpointSliceBuilder;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
@@ -207,11 +210,20 @@ class KubernetesClientFacade implements KubernetesFacade {
                     .build());
         }
 
+        var service = client.services().inNamespace(namespace).withName(serviceName).get();
+
         var slice = new EndpointSliceBuilder()
                 .withNewMetadata()
                 .withName(sliceName)
                 .withNamespace(namespace)
                 .addToLabels("kubernetes.io/service-name", serviceName)
+                .addToLabels("endpointslice.kubernetes.io/managed-by", "doorman")
+                .addToOwnerReferences(new OwnerReferenceBuilder()
+                        .withName(service.getMetadata().getName())
+                        .withApiVersion(service.getApiVersion())
+                        .withKind(service.getKind())
+                        .withUid(service.getMetadata().getUid())
+                        .build())
                 .endMetadata()
                 .withAddressType("IPv4")
                 .addNewEndpoint()
