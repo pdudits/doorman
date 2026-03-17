@@ -48,6 +48,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
         <logback.version>1.5.18</logback.version>
+        <docker.base.image>azul/zulu-openjdk-alpine:25-latest</docker.base.image>
+        <docker.image.name>docker.io/pdudits/doorman</docker.image.name>
+        <docker.platforms></docker.platforms>
     </properties>
 
     <dependencyManagement>
@@ -170,24 +173,64 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.0</version>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>3.1.3</version>
+                <configuration>
+                    <!-- Docker push is used as the deploy mechanism; Maven repo deploy is not needed -->
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.48.1</version>
+                <configuration>
+                    <images>
+                        <image>
+                            <name>${docker.image.name}:%l</name>
+                            <build>
+                                <from>${docker.base.image}</from>
+                                <tags>
+                                    <tag>latest</tag>
+                                </tags>
+                                <cmd>
+                                    <exec>
+                                        <arg>java</arg>
+                                        <arg>-cp</arg>
+                                        <arg>/app/lib/*:/app/${project.artifactId}-${project.version}.jar</arg>
+                                        <arg>io.zeromagic.doorman.Main</arg>
+                                    </exec>
+                                </cmd>
+                                <assemblies>
+                                    <assembly>
+                                        <name>deps</name>
+                                        <descriptorRef>dependencies</descriptorRef>
+                                        <targetDir>/app/lib</targetDir>
+                                    </assembly>
+                                    <assembly>
+                                        <name>artifact</name>
+                                        <descriptorRef>artifact</descriptorRef>
+                                        <targetDir>/app</targetDir>
+                                    </assembly>
+                                </assemblies>
+                            </build>
+                        </image>
+                    </images>
+                </configuration>
                 <executions>
                     <execution>
+                        <id>docker-build</id>
                         <phase>package</phase>
                         <goals>
-                            <goal>shade</goal>
+                            <goal>build</goal>
                         </goals>
-                        <configuration>
-                            <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>io.zeromagic.doorman.Main</mainClass>
-                                </transformer>
-                            </transformers>
-                            <finalName>doorman-shaded</finalName>
-                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>docker-push</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>push</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
@@ -225,5 +268,44 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>shade</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <version>3.5.0</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>shade</goal>
+                                </goals>
+                                <configuration>
+                                    <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
+                                    <transformers>
+                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                            <mainClass>io.zeromagic.doorman.Main</mainClass>
+                                        </transformer>
+                                    </transformers>
+                                    <finalName>doorman-shaded</finalName>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>multiplatform</id>
+            <properties>
+                <docker.platforms>linux/amd64,linux/arm64</docker.platforms>
+            </properties>
+        </profile>
+    </profiles>
 
 </project>

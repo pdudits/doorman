@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: doorman
+  namespace: doorman-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: doorman
+  template:
+    metadata:
+      labels:
+        app: doorman
+    spec:
+      serviceAccountName: doorman
+      containers:
+        - name: doorman
+          image: docker.io/pdudits/doorman:latest
+          ports:
+            - name: proxy
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
