@@ -84,7 +84,7 @@ class KubernetesClientFacade implements KubernetesFacade {
     public <T extends HasMetadata> AutoCloseable inform(
             Class<T> type, String namespace, String labelSelector, ResourceEventHandler<T> handler) {
         var operation = client.resources(type);
-        var scoped = namespace != null ? operation.inNamespace(namespace) : operation;
+        var scoped = namespace != null ? operation.inNamespace(namespace) : operation.inAnyNamespace();
         var filtered = labelSelector != null ? scoped.withLabelSelector(labelSelector) : scoped;
         return filtered.inform(handler);
     }

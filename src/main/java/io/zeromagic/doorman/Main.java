@@ -16,7 +16,6 @@
 package io.zeromagic.doorman;
 
 import io.avaje.inject.BeanScope;
-import io.fabric8.kubernetes.client.KubernetesClient;
 import io.zeromagic.doorman.cli.CliArgs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,16 +43,15 @@ public class Main {
             return;
         }
 
-        try {
-            var scope = BeanScope.builder().bean(CliArgs.class, cliArgs)
-                    .shutdownHook(true)
-                    .build();
+        BeanScope.builder().bean(CliArgs.class, cliArgs)
+                .shutdownHook(true)
+                .build();
 
-            var client = scope.get(KubernetesClient.class);
-            System.out.println(client.getMasterUrl());
-            System.out.println(client.getKubernetesVersion().getMajor() + "." + client.getKubernetesVersion().getMinor());
-        } catch (Exception e) {
-            LOGGER.error(e.getMessage(), e);
+        LOGGER.info("Doorman started");
+        try {
+            Thread.currentThread().join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 }

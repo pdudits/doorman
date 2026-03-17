@@ -147,6 +147,9 @@
                 <directory>deploy</directory>
                 <includes>
                     <include>scalingpolicy-crd.yaml</include>
+                    <include>namespace.yaml</include>
+                    <include>serviceaccount.yaml</include>
+                    <include>rbac.yaml</include>
                 </includes>
             </testResource>
         </testResources>
@@ -165,6 +168,7 @@
                 </executions>
                 <configuration>
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <excludedGroups>blackbox</excludedGroups>
                     <systemPropertyVariables>
                         <!-- Allow setting Host header in java.net.http.HttpClient for Traefik routing tests -->
                         <jdk.httpclient.allowRestrictedHeaders>host</jdk.httpclient.allowRestrictedHeaders>
@@ -305,6 +309,44 @@
             <properties>
                 <docker.platforms>linux/amd64,linux/arm64</docker.platforms>
             </properties>
+        </profile>
+        <profile>
+            <id>blackbox</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <version>0.48.1</version>
+                        <executions>
+                            <execution>
+                                <id>docker-save-blackbox</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>save</goal>
+                                </goals>
+                                <configuration>
+                                    <saveFile>${project.build.directory}/doorman-test.tar</saveFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>3.5.2</version>
+                        <configuration combine.self="override">
+                            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                            <groups>blackbox</groups>
+                            <systemPropertyVariables>
+                                <jdk.httpclient.allowRestrictedHeaders>host</jdk.httpclient.allowRestrictedHeaders>
+                                <doorman.image.tar>${project.build.directory}/doorman-test.tar</doorman.image.tar>
+                                <doorman.version>${project.version}</doorman.version>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 

@@ -22,15 +22,10 @@ import io.fabric8.kubernetes.api.model.EndpointSubsetBuilder;
 import io.fabric8.kubernetes.api.model.EndpointsBuilder;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
-import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
-import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
 import io.zeromagic.doorman.cli.CliArgs;
 import io.zeromagic.doorman.cli.DoormanConfig;
 import io.zeromagic.doorman.cli.KubernetesConfig;
-import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyPhase;
-import io.zeromagic.doorman.kubernetes.crd.ScalingPolicySpec;
-import io.zeromagic.doorman.kubernetes.crd.ScalingPolicyStatus;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -44,7 +39,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Instant;
-import java.util.Map;
 
 /**
  * JUnit 5 extension that wires the full Doorman component graph in-process against a live k3s
@@ -143,74 +137,14 @@ public class DoormanSystemHarness implements BeforeAllCallback, AfterAllCallback
     // Test resource helpers
     // -------------------------------------------------------------------------
 
-    /**
-     * Deploys {@code mendhak/http-https-echo:latest} as a Deployment + Service in the given
-     * namespace. The service exposes port 80 → targetPort 8080.
-     */
+    /** @see K3sClusterExtension#deployEchoApp(String, String) */
     public void deployEchoApp(String namespace, String name) {
-        var client = ext.client();
-
-        client.apps().deployments().inNamespace(namespace).resource(
-                new DeploymentBuilder()
-                        .withNewMetadata().withName(name).withNamespace(namespace).endMetadata()
-                        .withNewSpec()
-                            .withReplicas(1)
-                            .withNewSelector().withMatchLabels(Map.of("app", name)).endSelector()
-                            .withNewTemplate()
-                                .withNewMetadata().withLabels(Map.of("app", name)).endMetadata()
-                                .withNewSpec()
-                                    .addNewContainer()
-                                        .withName(name)
-                                        .withImage("mendhak/http-https-echo:latest")
-                                        .addNewPort().withContainerPort(8080).endPort()
-                                    .endContainer()
-                                .endSpec()
-                            .endTemplate()
-                        .endSpec()
-                        .build()
-        ).create();
-
-        client.services().inNamespace(namespace).resource(
-                new ServiceBuilder()
-                        .withNewMetadata().withName(name).withNamespace(namespace).endMetadata()
-                        .withNewSpec()
-                            .withSelector(Map.of("app", name))
-                            .addNewPort().withPort(80).withTargetPort(new IntOrString(8080)).endPort()
-                        .endSpec()
-                        .build()
-        ).create();
+        ext.deployEchoApp(namespace, name);
     }
 
-    /**
-     * Creates a minimal Ingress routing all traffic for {@code host} to {@code serviceName:80}.
-     */
+    /** @see K3sClusterExtension#createIngress(String, String, String) */
     public void createIngress(String namespace, String host, String serviceName) {
-        ext.client().network().v1().ingresses().inNamespace(namespace).resource(
-                new IngressBuilder()
-                        .withNewMetadata()
-                            .withName(serviceName)
-                            .withNamespace(namespace)
-                            .addToAnnotations("kubernetes.io/ingress.class", "traefik")
-                        .endMetadata()
-                        .withNewSpec()
-                            .addNewRule()
-                                .withHost(host)
-                                .withNewHttp()
-                                    .addNewPath()
-                                        .withPath("/")
-                                        .withPathType("Prefix")
-                                        .withNewBackend()
-                                            .withNewService()
-                                                .withName(serviceName)
-                                                .withNewPort().withNumber(80).endPort()
-                                            .endService()
-                                        .endBackend()
-                                    .endPath()
-                                .endHttp()
-                            .endRule()
-                        .endSpec()
-                        .build()
-        ).create();
+        ext.createIngress(namespace, host, serviceName);
     }
 
     /**
@@ -250,60 +184,23 @@ public class DoormanSystemHarness implements BeforeAllCallback, AfterAllCallback
         ).create();
     }
 
-    /** Creates a {@code ScalingPolicy} custom resource. */
+    /** @see K3sClusterExtension#createScalingPolicy(String, String, String, String, String) */
     public void createScalingPolicy(String namespace, String name, String serviceName,
                                     String deploymentName, String ingressName) {
-        var policy = new ScalingPolicy();
-        policy.setMetadata(new io.fabric8.kubernetes.api.model.ObjectMetaBuilder()
-                .withName(name).withNamespace(namespace).build());
-        var spec = new ScalingPolicySpec();
-        spec.setServiceName(serviceName);
-        spec.setDeploymentName(deploymentName);
-        spec.setIngressName(ingressName);
-        policy.setSpec(spec);
-        ext.client().resources(ScalingPolicy.class).inNamespace(namespace).resource(policy).create();
+        ext.createScalingPolicy(namespace, name, serviceName, deploymentName, ingressName);
     }
 
-    /**
-     * Waits until at least one pod matching {@code labelSelector} in {@code namespace} is Ready,
-     * or throws after {@code timeoutSeconds}.
-     */
+    /** @see K3sClusterExtension#awaitPodReady(String, String, int) */
     public void awaitPodReady(String namespace, String labelSelector, int timeoutSeconds)
             throws InterruptedException {
-        Instant deadline = Instant.now().plusSeconds(timeoutSeconds);
-        while (Instant.now().isBefore(deadline)) {
-            var pods = ext.client().pods().inNamespace(namespace)
-                    .withLabelSelector(labelSelector).list().getItems();
-            boolean ready = pods.stream().anyMatch(p -> {
-                var conditions = p.getStatus() == null ? null : p.getStatus().getConditions();
-                if (conditions == null) return false;
-                return conditions.stream().anyMatch(
-                        c -> "Ready".equals(c.getType()) && "True".equals(c.getStatus()));
-            });
-            if (ready) return;
-            Thread.sleep(2_000);
-        }
-        throw new AssertionError("No pod matching '" + labelSelector + "' in namespace '"
-                + namespace + "' became Ready within " + timeoutSeconds + "s");
+        ext.awaitPodReady(namespace, labelSelector, timeoutSeconds);
     }
 
-    /**
-     * Waits until the named {@code ScalingPolicy} reaches {@code expectedPhase},
-     * or throws after {@code timeoutSeconds}.
-     */
+    /** @see K3sClusterExtension#awaitScalingPolicyPhase(String, String, ScalingPolicyPhase, int) */
     public void awaitScalingPolicyPhase(String namespace, String name,
                                         ScalingPolicyPhase expectedPhase, int timeoutSeconds)
             throws InterruptedException {
-        Instant deadline = Instant.now().plusSeconds(timeoutSeconds);
-        while (Instant.now().isBefore(deadline)) {
-            var policy = ext.client().resources(ScalingPolicy.class)
-                    .inNamespace(namespace).withName(name).get();
-            ScalingPolicyStatus status = policy == null ? null : policy.getStatus();
-            if (status != null && expectedPhase.equals(status.getPhase())) return;
-            Thread.sleep(1_000);
-        }
-        throw new AssertionError("ScalingPolicy '" + name + "' did not reach phase "
-                + expectedPhase + " within " + timeoutSeconds + "s");
+        ext.awaitScalingPolicyPhase(namespace, name, expectedPhase, timeoutSeconds);
     }
 
     /** Returns the current {@code spec.replicas} for the named Deployment. */
@@ -315,19 +212,10 @@ public class DoormanSystemHarness implements BeforeAllCallback, AfterAllCallback
         return r == null ? 1 : r;
     }
 
-    /**
-     * Waits until {@code spec.replicas} for the named Deployment equals {@code expected},
-     * or throws after {@code timeoutSeconds}.
-     */
+    /** @see K3sClusterExtension#awaitDeploymentReplicas(String, String, int, int) */
     public void awaitDeploymentReplicas(String namespace, String deploymentName,
                                         int expected, int timeoutSeconds) throws InterruptedException {
-        Instant deadline = Instant.now().plusSeconds(timeoutSeconds);
-        while (Instant.now().isBefore(deadline)) {
-            if (getCurrentReplicas(namespace, deploymentName) == expected) return;
-            Thread.sleep(500);
-        }
-        throw new AssertionError("Deployment '" + deploymentName + "' spec.replicas did not reach "
-                + expected + " within " + timeoutSeconds + "s");
+        ext.awaitDeploymentReplicas(namespace, deploymentName, expected, timeoutSeconds);
     }
 
     // -------------------------------------------------------------------------
