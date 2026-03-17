@@ -40,7 +40,8 @@ class ConfigProvider {
             throw new IllegalStateException(
                     "Doorman pod IP is not configured. Set --pod-ip or expose POD_IP via the Downward API.");
         }
-        var config = new DoormanConfig(ip, args.proxyPort, DurationParser.parse(args.scaleUpTimeout), DurationParser.parse(args.propagationDelay));
+        var config = new DoormanConfig(ip, args.proxyPort, DurationParser.parse(args.scaleUpTimeout), DurationParser.parse(args.propagationDelay),
+                args.disableLegacyEndpoints);
         LOGGER.info("Doorman config: podIp={}, proxyPort={}, scaleUpTimeout={}, propagationDelay={}",
                 config.podIp(), config.proxyPort(), config.scaleUpTimeout(), config.propagationDelay());
         return config;

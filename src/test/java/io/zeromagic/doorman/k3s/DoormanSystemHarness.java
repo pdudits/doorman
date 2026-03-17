@@ -108,7 +108,8 @@ public class DoormanSystemHarness implements BeforeAllCallback, AfterAllCallback
                 "--traefik-metrics-url",   ext.traefikMetricsUrl(),
                 "--idle-timeout",          idleTimeout,
                 "--metrics-poll-interval", pollInterval,
-                "--scale-up-timeout",      "30s"
+                "--scale-up-timeout",      "30s",
+                "--disable-legacy-endpoints"
                 //"--propagation-delay",     "1200ms" // keep default propagation delay
         );
 

@@ -63,7 +63,7 @@ public class ProxyServer {
     /** Test constructor: uses port 0 to get a random available port. */
     ProxyServer(IngressRouteIndex routeIndex, ScaledApplicationRegistry registry, long scaleUpTimeoutMillis) {
         this(routeIndex, registry,
-                new DoormanConfig("0.0.0.0", 0, java.time.Duration.ofMillis(scaleUpTimeoutMillis), java.time.Duration.ZERO));
+                new DoormanConfig("0.0.0.0", 0, java.time.Duration.ofMillis(scaleUpTimeoutMillis), java.time.Duration.ZERO, false));
     }
 
     @PostConstruct

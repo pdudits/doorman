@@ -22,5 +22,8 @@ package io.zeromagic.doorman.cli;
  * scaleUpTimeout is the maximum time to wait for a service to become ready before returning 503.
  * propagationDelay is the time to wait after scale-up before redirecting, allowing the ingress controller to propagate endpoint changes.
  */
-public record DoormanConfig(String podIp, int proxyPort, java.time.Duration scaleUpTimeout, java.time.Duration propagationDelay) {
+public record DoormanConfig(String podIp, int proxyPort, java.time.Duration scaleUpTimeout, java.time.Duration propagationDelay, boolean disableEndpoints) {
+    public DoormanConfig(String podIp, int proxyPort, java.time.Duration scaleUpTimeout, java.time.Duration propagationDelay) {
+        this(podIp, proxyPort, scaleUpTimeout, propagationDelay, false);
+    }
 }

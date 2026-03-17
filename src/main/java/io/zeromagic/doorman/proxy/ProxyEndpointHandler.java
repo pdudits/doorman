@@ -56,24 +56,26 @@ class ProxyEndpointHandler implements EndpointRegistrar, AutoCloseable {
 
     @PostConstruct
     void watch() {
-        this.endpointWatch = client.inform(Endpoints.class, new ResourceEventHandler<Endpoints>() {
-            @Override
-            public void onAdd(Endpoints obj) {
+        if (!doormanConfig.disableEndpoints()) {
+            this.endpointWatch = client.inform(Endpoints.class, new ResourceEventHandler<Endpoints>() {
+                @Override
+                public void onAdd(Endpoints obj) {
 
-            }
-
-            @Override
-            public void onUpdate(Endpoints oldObj, Endpoints newObj) {
-                if (relevant(RegisteredService.ofEndpoint(oldObj))) {
-                    assureEndpointInstalled(newObj);
                 }
-            }
 
-            @Override
-            public void onDelete(Endpoints obj, boolean deletedFinalStateUnknown) {
+                @Override
+                public void onUpdate(Endpoints oldObj, Endpoints newObj) {
+                    if (relevant(RegisteredService.ofEndpoint(oldObj))) {
+                        assureEndpointInstalled(newObj);
+                    }
+                }
 
-            }
-        });
+                @Override
+                public void onDelete(Endpoints obj, boolean deletedFinalStateUnknown) {
+
+                }
+            });
+        }
         this.sliceWatch = client.inform(EndpointSlice.class, new ResourceEventHandler<EndpointSlice>() {
             @Override
             public void onAdd(EndpointSlice obj) {
@@ -137,7 +139,9 @@ class ProxyEndpointHandler implements EndpointRegistrar, AutoCloseable {
 
     private void installEndpoints(RegisteredService service) {
         logger.debug("Installing endpoints for {}", service);
-        client.addEndpointSubset(service.namespace(), service.serviceName(), doormanConfig.podIp(), doormanConfig.proxyPort());
+        if (!doormanConfig.disableEndpoints()) {
+            client.addEndpointSubset(service.namespace(), service.serviceName(), doormanConfig.podIp(), doormanConfig.proxyPort());
+        }
         client.addEndpointSlice(service.namespace(), service.serviceName(), doormanConfig.podIp(), doormanConfig.proxyPort());
     }
 

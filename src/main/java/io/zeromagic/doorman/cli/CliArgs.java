@@ -67,6 +67,12 @@ public class CliArgs {
             defaultValue = "${DOORMAN_PROXY_PORT:-8080}")
     int proxyPort;
 
+    @CommandLine.Option(names = "--disable-legacy-endpoints",
+            description = "Do not register (deprecated) Service Ednpoints when intercepting scaled down servicess",
+            defaultValue = "${DISABLE_LEGACY_ENDPOINTS}"
+    )
+    boolean disableLegacyEndpoints;
+
     @CommandLine.Option(names = "--scale-up-timeout",
             description = "Maximum time to wait for a service to become ready before returning 503 (default: 60s). Env: SCALE_UP_TIMEOUT.",
             defaultValue = "${SCALE_UP_TIMEOUT:-60s}")
