@@ -339,7 +339,6 @@
                             <redirectTestOutputToFile>true</redirectTestOutputToFile>
                             <groups>blackbox</groups>
                             <systemPropertyVariables>
-                                <jdk.httpclient.allowRestrictedHeaders>host</jdk.httpclient.allowRestrictedHeaders>
                                 <doorman.image.tar>${project.build.directory}/doorman-test.tar</doorman.image.tar>
                                 <doorman.version>${project.version}</doorman.version>
                             </systemPropertyVariables>

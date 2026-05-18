@@ -20,9 +20,7 @@ import io.fabric8.kubernetes.api.model.Endpoints;
 import io.fabric8.kubernetes.api.model.EndpointsBuilder;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
-import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
-import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.discovery.v1.EndpointSlice;
 import io.fabric8.kubernetes.api.model.discovery.v1.EndpointSliceBuilder;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
@@ -80,7 +78,6 @@ class KubernetesClientFacade implements KubernetesFacade {
     // ── inform ────────────────────────────────────────────────────────────────
 
     @Override
-    @SuppressWarnings({"rawtypes", "unchecked"})
     public <T extends HasMetadata> AutoCloseable inform(
             Class<T> type, String namespace, String labelSelector, ResourceEventHandler<T> handler) {
         var operation = client.resources(type);
