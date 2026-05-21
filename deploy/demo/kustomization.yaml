@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: doorman-demo
+resources:
+  - namespace.yaml
+  - echo-deployment.yaml
+  - echo-service.yaml
+  - echo-ingress.yaml
+  - echo-scalingpolicy.yaml
+
+patches:
+  - target:
+      kind: Ingress
+      name: echo
+    patch: |-
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: echo
+      spec:
+        ingressClassName: traefik
+        rules:
+          - host: echo.localtest.me
+

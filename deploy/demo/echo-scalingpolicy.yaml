@@ -1,0 +1,10 @@
+apiVersion: doorman.zeromagic.io/v1alpha1
+kind: ScalingPolicy
+metadata:
+  name: echo
+spec:
+  serviceName: echo
+  deploymentName: echo
+  ingressName: echo
+  idleTimeout: 30s
+

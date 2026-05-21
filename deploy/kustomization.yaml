@@ -8,3 +8,4 @@ resources:
   - serviceaccount.yaml
   - rbac.yaml
   - deployment.yaml
+  - scalingpolicy-crd.yaml
