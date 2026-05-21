@@ -193,18 +193,23 @@
                         <image>
                             <name>${docker.image.name}:%l</name>
                             <build>
+                                <buildx>
+                                    <platforms>
+                                        <platform>${docker.platforms}</platform>
+                                    </platforms>
+                                </buildx>
                                 <from>${docker.base.image}</from>
                                 <tags>
                                     <tag>latest</tag>
                                 </tags>
-                                <cmd>
+                                <entryPoint>
                                     <exec>
                                         <arg>java</arg>
                                         <arg>-cp</arg>
                                         <arg>/app/lib/*:/app/${project.artifactId}-${project.version}.jar</arg>
                                         <arg>io.zeromagic.doorman.Main</arg>
                                     </exec>
-                                </cmd>
+                                </entryPoint>
                                 <assemblies>
                                     <assembly>
                                         <name>deps</name>
