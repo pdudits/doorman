@@ -19,9 +19,9 @@ import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressRule;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressServiceBackend;
 import io.zeromagic.doorman.kubernetes.KubernetesFacade;
+import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
 import io.zeromagic.doorman.kubernetes.crd.ScalingPolicySpec;
 import io.zeromagic.doorman.kubernetes.events.ScalingPolicyEvents;
-import io.zeromagic.doorman.kubernetes.crd.ScalingPolicy;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -146,6 +146,7 @@ class TraefikServiceNameResolver implements ScalingPolicyEvents {
             IngressServiceBackend svc, String namespace, String serviceName) {
         if (svc == null) return Optional.empty();
         if (!serviceName.equals(svc.getName())) return Optional.empty();
+        // TODO: add handling of translation from service name to number. For now number is required
         if (svc.getPort() == null || svc.getPort().getNumber() == null) return Optional.empty();
         return Optional.of(buildLabel(namespace, serviceName, svc.getPort().getNumber()));
     }
